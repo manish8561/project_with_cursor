@@ -1,57 +1,70 @@
 package services
 
 import (
+	"backend/internal/config"
 	"backend/internal/models"
+	"context"
 	"errors"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UserService struct {
-	// In a real application, you would have a database connection here
-	users []models.User
+	mongoConfig *config.MongoDBConfig
 }
 
-func NewUserService() *UserService {
+func NewUserService(mongoConfig *config.MongoDBConfig) *UserService {
 	return &UserService{
-		users: []models.User{
-			{
-				ID:       1,
-				Email:    "test@example.com",
-				Password: "password123", // In real app, this would be hashed
-			},
-		},
+		mongoConfig: mongoConfig,
 	}
 }
 
 func (s *UserService) Login(email, password string) (*models.LoginResponse, error) {
-	for _, user := range s.users {
-		if user.Email == email && user.Password == password {
-			// In a real application, you would generate a JWT token here
-			return &models.LoginResponse{
-				Token: "dummy-token", // Replace with JWT token in production
-				User:  user,
-			}, nil
-		}
+	collection := s.mongoConfig.GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
 	}
-	return nil, errors.New("invalid credentials")
+
+	// In a real application, you would generate a JWT token here
+	return &models.LoginResponse{
+		Token: "dummy-token", // Replace with JWT token in production
+		User:  user,
+	}, nil
 }
 
 func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResponse, error) {
+	collection := s.mongoConfig.GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	// Check if user already exists
-	for _, user := range s.users {
-		if user.Email == req.Email {
-			return nil, errors.New("user already exists")
-		}
+	count, err := collection.CountDocuments(ctx, bson.M{"email": req.Email})
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, errors.New("user already exists")
 	}
 
 	// Create new user
 	newUser := models.User{
-		ID:       uint(len(s.users) + 1),
+		ID:       primitive.NewObjectID().Hex(),
 		Email:    req.Email,
 		Password: req.Password, // In real app, this would be hashed
 	}
 
-	// Add user to the list
-	s.users = append(s.users, newUser)
+	// Insert user into database
+	_, err = collection.InsertOne(ctx, newUser)
+	if err != nil {
+		return nil, err
+	}
 
 	return &models.RegisterResponse{
 		Message: "User registered successfully",

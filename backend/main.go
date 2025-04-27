@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"backend/internal/config"
 	"backend/internal/handlers"
@@ -14,6 +17,10 @@ import (
 func main() {
 	// Load environment configuration
 	cfg := config.LoadConfig()
+
+	// Initialize MongoDB
+	mongoConfig := config.NewMongoDBConfig()
+	defer mongoConfig.Close()
 
 	// Initialize Gin router
 	r := gin.Default()
@@ -32,8 +39,8 @@ func main() {
 		c.Next()
 	})
 
-	// Initialize services
-	userService := services.NewUserService()
+	// Initialize services with MongoDB
+	userService := services.NewUserService(mongoConfig)
 	userHandler := handlers.NewUserHandler(userService)
 
 	// Health check endpoint
@@ -49,5 +56,17 @@ func main() {
 
 	// Start the server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
-	r.Run(serverAddr) // listen and serve on configured port
+
+	// Handle graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := r.Run(serverAddr); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
+	}()
+
+	<-quit
+	fmt.Println("Shutting down server...")
 }

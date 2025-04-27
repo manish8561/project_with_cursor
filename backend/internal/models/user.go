@@ -1,9 +1,9 @@
 package models
 
 type User struct {
-	ID       uint   `json:"id"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	ID       string `json:"id" bson:"_id,omitempty"`
+	Email    string `json:"email" binding:"required,email" bson:"email"`
+	Password string `json:"password" binding:"required,min=6" bson:"password"`
 }
 
 type LoginRequest struct {
