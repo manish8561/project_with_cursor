@@ -11,10 +11,16 @@ import (
 )
 
 func setupTestDB(t *testing.T) (*mongo.Client, func()) {
-	// Connect to test MongoDB
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	// Connect to test MongoDB with authentication
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://admin:password123@localhost:27017"))
 	if err != nil {
 		t.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+
+	// Clean up any existing data
+	err = client.Database("testdb").Drop(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to clean up test database: %v", err)
 	}
 
 	// Cleanup function
@@ -35,7 +41,7 @@ func TestUserService_Login(t *testing.T) {
 	testUser := models.User{
 		ID:       "1",
 		Email:    "test@example.com",
-		Password: "password123",
+		Password: "password123", // In real app, this would be hashed
 	}
 	_, err := collection.InsertOne(context.Background(), testUser)
 	if err != nil {

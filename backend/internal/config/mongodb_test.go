@@ -7,17 +7,17 @@ import (
 
 func TestNewMongoDBConfig(t *testing.T) {
 	// Set test environment variables
-	os.Setenv("MONGODB_USERNAME", "testuser")
-	os.Setenv("MONGODB_PASSWORD", "testpass")
-	os.Setenv("MONGODB_HOST", "testhost")
-	os.Setenv("MONGODB_PORT", "27018")
+	os.Setenv("MONGODB_USERNAME", "admin")
+	os.Setenv("MONGODB_PASSWORD", "password123")
+	os.Setenv("MONGODB_HOST", "localhost")
+	os.Setenv("MONGODB_PORT", "27017")
 	os.Setenv("MONGODB_DATABASE", "testdb")
 
 	// Create config
 	config := NewMongoDBConfig()
 
 	// Verify URI construction
-	expectedURI := "mongodb://testuser:testpass@testhost:27018"
+	expectedURI := "mongodb://admin:password123@localhost:27017"
 	if config.URI != expectedURI {
 		t.Errorf("Expected URI %s, got %s", expectedURI, config.URI)
 	}

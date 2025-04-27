@@ -13,15 +13,23 @@ import (
 	"backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func setupTestHandler(t *testing.T) (*UserHandler, func()) {
-	// Connect to test MongoDB
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	// Connect to test MongoDB with authentication
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://admin:password123@localhost:27017"))
 	if err != nil {
 		t.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+
+	// Clean up any existing data
+	err = client.Database("testdb").Drop(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to clean up test database: %v", err)
 	}
 
 	// Create service
@@ -115,15 +123,23 @@ func TestUserHandler_Login(t *testing.T) {
 	handler, cleanup := setupTestHandler(t)
 	defer cleanup()
 
-	// Create test user
-	service := handler.userService
-	_, err := service.Register(models.RegisterRequest{
-		Email:           "test@example.com",
-		Password:        "password123",
-		ConfirmPassword: "password123",
-	})
+	// Create test user directly in the database
+	collection := handler.userService.GetMongoConfig().GetCollection("users")
+	testUser := models.User{
+		ID:       primitive.NewObjectID().Hex(),
+		Email:    "test@example.com",
+		Password: "password123", // In real app, this would be hashed
+	}
+	_, err := collection.InsertOne(context.Background(), testUser)
 	if err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	// Verify the user was inserted
+	var insertedUser models.User
+	err = collection.FindOne(context.Background(), bson.M{"email": "test@example.com"}).Decode(&insertedUser)
+	if err != nil {
+		t.Fatalf("Failed to find inserted user: %v", err)
 	}
 
 	tests := []struct {

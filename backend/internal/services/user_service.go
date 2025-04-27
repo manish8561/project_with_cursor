@@ -21,6 +21,11 @@ func NewUserService(mongoConfig *config.MongoDBConfig) *UserService {
 	}
 }
 
+// GetMongoConfig returns the MongoDB configuration
+func (s *UserService) GetMongoConfig() *config.MongoDBConfig {
+	return s.mongoConfig
+}
+
 func (s *UserService) Login(email, password string) (*models.LoginResponse, error) {
 	collection := s.mongoConfig.GetCollection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
