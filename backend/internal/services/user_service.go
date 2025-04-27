@@ -34,3 +34,27 @@ func (s *UserService) Login(email, password string) (*models.LoginResponse, erro
 	}
 	return nil, errors.New("invalid credentials")
 }
+
+func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResponse, error) {
+	// Check if user already exists
+	for _, user := range s.users {
+		if user.Email == req.Email {
+			return nil, errors.New("user already exists")
+		}
+	}
+
+	// Create new user
+	newUser := models.User{
+		ID:       uint(len(s.users) + 1),
+		Email:    req.Email,
+		Password: req.Password, // In real app, this would be hashed
+	}
+
+	// Add user to the list
+	s.users = append(s.users, newUser)
+
+	return &models.RegisterResponse{
+		Message: "User registered successfully",
+		User:    newUser,
+	}, nil
+}

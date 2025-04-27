@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
+	"backend/internal/config"
 	"backend/internal/handlers"
 	"backend/internal/services"
 
@@ -10,6 +12,9 @@ import (
 )
 
 func main() {
+	// Load environment configuration
+	cfg := config.LoadConfig()
+
 	// Initialize Gin router
 	r := gin.Default()
 
@@ -38,9 +43,11 @@ func main() {
 		})
 	})
 
-	// Login endpoint
+	// API routes
 	r.POST("/api/login", userHandler.Login)
+	r.POST("/api/register", userHandler.Register)
 
 	// Start the server
-	r.Run(":8080") // listen and serve on 0.0.0.0:8080
+	serverAddr := fmt.Sprintf(":%s", cfg.Port)
+	r.Run(serverAddr) // listen and serve on configured port
 }
