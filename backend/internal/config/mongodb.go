@@ -30,13 +30,13 @@ func NewMongoDBConfig() *MongoDBConfig {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	// Ping the database
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	return &MongoDBConfig{
@@ -54,6 +54,6 @@ func (c *MongoDBConfig) Close() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := c.Client.Disconnect(ctx); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
