@@ -99,3 +99,55 @@ docker run -p 80:80 frontend
 - Implement proper security measures
 - Configure proper logging
 - Set up monitoring
+
+## Running with Docker
+
+To run the entire application (frontend, backend, and MongoDB) using Docker:
+
+```bash
+docker-compose up --build
+```
+
+This will:
+- Build and start the backend service on port 8080
+- Build and start the frontend service on port 80
+- Start MongoDB on port 27017
+- Set up the necessary networking between services
+
+To stop the services:
+
+```bash
+docker-compose down
+```
+
+To stop the services and remove volumes:
+
+```bash
+docker-compose down -v
+```
+
+## Development
+
+### Frontend
+
+See [frontend/README.md](frontend/README.md) for frontend-specific instructions.
+
+### Backend
+
+See [backend/README.md](backend/README.md) for backend-specific instructions.
+
+## Project Structure
+
+- `frontend/` - Angular frontend application
+- `backend/` - Go backend application
+- `docker-compose.yml` - Docker Compose configuration
+- `frontend/Dockerfile` - Frontend Docker configuration
+- `backend/Dockerfile` - Backend Docker configuration
+
+## Features
+
+- User authentication (login/register)
+- Protected routes
+- MongoDB database
+- Dockerized deployment
+- Nginx reverse proxy

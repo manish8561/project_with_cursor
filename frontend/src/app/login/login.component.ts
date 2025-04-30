@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { AuthService, LoginRequest } from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -64,23 +65,32 @@ import { CommonModule } from '@angular/common';
 })
 export class LoginComponent {
   loginForm: FormGroup;
+  errorMessage: string = '';
 
   constructor(
     private fb: FormBuilder,
+    private authService: AuthService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
+      password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
   onSubmit() {
     if (this.loginForm.valid) {
-      // Here you would typically make an API call to authenticate
-      // For now, we'll just redirect to dashboard
-      console.log('Login form submitted:', this.loginForm.value);
-      this.router.navigate(['/dashboard']);
+      const credentials: LoginRequest = this.loginForm.value;
+      this.authService.login(credentials).subscribe({
+        next: (response) => {
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('user', JSON.stringify(response.user));
+          this.router.navigate(['/dashboard']);
+        },
+        error: (error) => {
+          this.errorMessage = error.error?.message || 'Login failed. Please try again.';
+        }
+      });
     }
   }
 }

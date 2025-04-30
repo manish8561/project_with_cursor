@@ -22,10 +22,9 @@ WORKDIR /app
 
 # Copy the binary from builder
 COPY --from=builder /app/main .
-COPY --from=builder /app/.env .
 
 # Expose port
 EXPOSE 8080
 
-# Command to run the executable
+# Run the application
 CMD ["./main"] 

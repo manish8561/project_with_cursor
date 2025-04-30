@@ -1,59 +1,69 @@
-# Frontend
+# Frontend Application
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.9.
+This is the frontend application built with Angular.
 
-## Development server
+## Prerequisites
 
-To start a local development server, run:
+- Node.js (v14 or later)
+- npm (v6 or later)
+- Angular CLI (v15 or later)
+
+## Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+## Development
+
+To run the application in development mode:
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+This will:
+- Start the development server
+- Use development environment configuration
+- Open the application at `http://localhost:4200`
+- Enable hot-reloading for development
 
-## Code scaffolding
+## Production Build
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+To build the application for production:
 
 ```bash
-ng generate --help
+ng build --configuration=production
 ```
 
-## Building
+This will:
+- Create a production build in the `dist/frontend` directory
+- Use production environment configuration
+- Optimize the build for production
+- Enable output hashing for cache busting
 
-To build the project run:
+## Environment Configuration
 
-```bash
-ng build
-```
+The application uses different environment configurations for development and production:
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+- Development: `src/environments/environment.ts`
+- Production: `src/environments/environment.prod.ts`
 
-## Running unit tests
+Make sure to update the `apiUrl` in both files according to your backend server configuration.
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+## Project Structure
 
-```bash
-ng test
-```
+- `src/app/` - Main application code
+  - `services/` - Services including authentication
+  - `components/` - Reusable components
+  - `guards/` - Route guards
+  - `environments/` - Environment configurations
 
-## Running end-to-end tests
+## Features
 
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- User authentication (login/register)
+- Protected routes
+- Responsive design
+- Form validation
+- Error handling
