@@ -5,6 +5,11 @@ definitions:
       error:
         type: string
     type: object
+  models.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
   models.LoginRequest:
     properties:
       email:
@@ -70,7 +75,22 @@ info:
   title: Go Backend API
   version: "1.0"
 paths:
-  /api/login:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns the server's health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HealthResponse'
+      summary: Check server health
+      tags:
+      - health
+  /user/login:
     post:
       consumes:
       - application/json
@@ -100,7 +120,7 @@ paths:
       summary: Login user
       tags:
       - auth
-  /api/register:
+  /user/register:
     post:
       consumes:
       - application/json

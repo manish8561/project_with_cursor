@@ -66,17 +66,21 @@ func main() {
 	// Initialize services with MongoDB
 	userService := services.NewUserService(mongoConfig)
 	userHandler := handlers.NewUserHandler(userService)
+	healthHandler := handlers.NewHealthHandler()
 
 	// Health check endpoint
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
-	})
+	// @Summary Check server health
+	// @Description Returns the server's health status
+	// @Tags health
+	// @Accept json
+	// @Produce json
+	// @Success 200 {object} models.HealthResponse
+	// @Router /api/health [get]
+	r.GET("/api/health", healthHandler.Check)
 
 	// API routes
-	r.POST("/api/login", userHandler.Login)
-	r.POST("/api/register", userHandler.Register)
+	r.POST("/api/user/login", userHandler.Login)
+	r.POST("/api/user/register", userHandler.Register)
 
 	// Swagger documentation
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

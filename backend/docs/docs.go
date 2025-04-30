@@ -24,7 +24,30 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/login": {
+        "/health": {
+            "get": {
+                "description": "Returns the server's health status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Check server health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/login": {
             "post": {
                 "description": "Authenticate user and return JWT token",
                 "consumes": [
@@ -70,7 +93,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/register": {
+        "/user/register": {
             "post": {
                 "description": "Register a new user with email, password, and name",
                 "consumes": [
@@ -122,6 +145,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
                     "type": "string"
                 }
             }

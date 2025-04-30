@@ -1,6 +1,6 @@
 <div class="register-container">
   <div class="register-card">
-    <h2>Register</h2>
+    <h2>Create an Account</h2>
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
       <div class="form-group">
         <label for="name">Name</label>
@@ -11,7 +11,8 @@
           placeholder="Enter your name"
         />
         <div class="error-message" *ngIf="registerForm.get('name')?.invalid && registerForm.get('name')?.touched">
-          Name is required
+          <span *ngIf="registerForm.get('name')?.errors?.['required']">Name is required</span>
+          <span *ngIf="registerForm.get('name')?.errors?.['minlength']">Name must be at least 2 characters</span>
         </div>
       </div>
 
@@ -24,7 +25,8 @@
           placeholder="Enter your email"
         />
         <div class="error-message" *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
-          Please enter a valid email address
+          <span *ngIf="registerForm.get('email')?.errors?.['required']">Email is required</span>
+          <span *ngIf="registerForm.get('email')?.errors?.['email']">Please enter a valid email</span>
         </div>
       </div>
 
@@ -37,7 +39,8 @@
           placeholder="Enter your password"
         />
         <div class="error-message" *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
-          Password must be at least 6 characters long
+          <span *ngIf="registerForm.get('password')?.errors?.['required']">Password is required</span>
+          <span *ngIf="registerForm.get('password')?.errors?.['minlength']">Password must be at least 6 characters</span>
         </div>
       </div>
 
@@ -58,11 +61,13 @@
         {{ errorMessage }}
       </div>
 
-      <button type="submit" [disabled]="registerForm.invalid">Register</button>
+      <button type="submit" [disabled]="registerForm.invalid">
+        Register
+      </button>
     </form>
 
     <div class="login-link">
-      Already have an account? <a routerLink="/login">Login here</a>
+      Already have an account? <a routerLink="/login">Login</a>
     </div>
   </div>
 </div> 

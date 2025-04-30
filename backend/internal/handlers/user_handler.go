@@ -43,7 +43,7 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 // @Success 200 {object} models.LoginResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
-// @Router /api/login [post]
+// @Router /user/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var loginReq models.LoginRequest
 	if err := c.ShouldBindJSON(&loginReq); err != nil {
@@ -82,7 +82,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 // @Success 201 {object} models.RegisterResponse
 // @Failure 400 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse
-// @Router /api/register [post]
+// @Router /user/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var registerReq models.RegisterRequest
 	if err := c.ShouldBindJSON(&registerReq); err != nil {
