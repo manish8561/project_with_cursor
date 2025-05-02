@@ -14,7 +14,10 @@ func TestNewMongoDBConfig(t *testing.T) {
 	os.Setenv("MONGODB_DATABASE", "testdb")
 
 	// Create config
-	config := NewMongoDBConfig()
+	config, err := NewMongoDBConfig("mongodb://admin:password123@localhost:27017", "testdb")
+	if err != nil {
+		t.Fatalf("Failed to create MongoDB config: %v", err)
+	}
 
 	// Verify URI construction
 	expectedURI := "mongodb://admin:password123@localhost:27017"

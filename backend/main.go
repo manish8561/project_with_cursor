@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -43,8 +44,15 @@ func main() {
 	cfg := config.LoadConfig()
 
 	// Initialize MongoDB
-	mongoConfig := config.NewMongoDBConfig()
+	mongoConfig, err := config.NewMongoDBConfig(cfg.MongoURI, cfg.MongoDB)
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
 	defer mongoConfig.Close()
+
+	// Initialize JWT service
+	jwtConfig := config.NewJWTConfig(cfg.JWTSecret)
+	jwtService := services.NewJWTService(jwtConfig)
 
 	// Initialize Gin router
 	r := gin.Default()
@@ -63,8 +71,8 @@ func main() {
 		c.Next()
 	})
 
-	// Initialize services with MongoDB
-	userService := services.NewUserService(mongoConfig)
+	// Initialize services with MongoDB and JWT
+	userService := services.NewUserService(mongoConfig, jwtService)
 	userHandler := handlers.NewUserHandler(userService)
 	healthHandler := handlers.NewHealthHandler()
 
@@ -94,10 +102,10 @@ func main() {
 
 	go func() {
 		if err := r.Run(serverAddr); err != nil {
-			fmt.Printf("Server error: %v\n", err)
+			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
 	<-quit
-	fmt.Println("Shutting down server...")
+	log.Println("Shutting down server...")
 }

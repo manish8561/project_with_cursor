@@ -13,11 +13,13 @@ import (
 
 type UserService struct {
 	mongoConfig *config.MongoDBConfig
+	jwtService  *JWTService
 }
 
-func NewUserService(mongoConfig *config.MongoDBConfig) *UserService {
+func NewUserService(mongoConfig *config.MongoDBConfig, jwtService *JWTService) *UserService {
 	return &UserService{
 		mongoConfig: mongoConfig,
+		jwtService:  jwtService,
 	}
 }
 
@@ -37,9 +39,13 @@ func (s *UserService) Login(email, password string) (*models.LoginResponse, erro
 		return nil, errors.New("invalid credentials")
 	}
 
-	// In a real application, you would generate a JWT token here
+	token, err := s.jwtService.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		return nil, errors.New("failed to generate token")
+	}
+
 	return &models.LoginResponse{
-		Token: "dummy-token", // Replace with JWT token in production
+		Token: token,
 		User:  user,
 	}, nil
 }

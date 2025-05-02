@@ -27,19 +27,16 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - GIN_MODE=release
-      - MONGODB_USERNAME=admin
-      - MONGODB_PASSWORD=password123
-      - MONGODB_HOST=mongodb
-      - MONGODB_PORT=27017
-      - MONGODB_DATABASE=appdb
+      - JWT_SECRET=your-secret-key
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017
+      - MONGO_DB=appdb
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       - app-network
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/health" ]
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -50,17 +47,13 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - app-network
-    healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
     restart: unless-stopped
 
 networks:

@@ -48,11 +48,13 @@ func TestUserService_Login(t *testing.T) {
 		t.Fatalf("Failed to insert test user: %v", err)
 	}
 
-	// Create service
-	service := NewUserService(&config.MongoDBConfig{
+	// Create services
+	mongoConfig := &config.MongoDBConfig{
 		Client:   client,
 		Database: "testdb",
-	})
+	}
+	jwtService := NewJWTService(config.NewJWTConfig("test-secret"))
+	service := NewUserService(mongoConfig, jwtService)
 
 	// Test cases
 	tests := []struct {
@@ -95,11 +97,13 @@ func TestUserService_Register(t *testing.T) {
 	client, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	// Create service
-	service := NewUserService(&config.MongoDBConfig{
+	// Create services
+	mongoConfig := &config.MongoDBConfig{
 		Client:   client,
 		Database: "testdb",
-	})
+	}
+	jwtService := NewJWTService(config.NewJWTConfig("test-secret"))
+	service := NewUserService(mongoConfig, jwtService)
 
 	// Test cases
 	tests := []struct {

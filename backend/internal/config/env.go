@@ -8,7 +8,10 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port      string
+	JWTSecret string
+	MongoURI  string
+	MongoDB   string
 }
 
 func LoadConfig() *Config {
@@ -18,7 +21,10 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		Port: getEnvWithDefault("PORT", "8080"),
+		Port:      getEnvWithDefault("PORT", "8080"),
+		JWTSecret: getEnvWithDefault("JWT_SECRET", "your-secret-key"),
+		MongoURI:  getEnvWithDefault("MONGO_URI", "mongodb://localhost:27017"),
+		MongoDB:   getEnvWithDefault("MONGO_DB", "testdb"),
 	}
 }
 

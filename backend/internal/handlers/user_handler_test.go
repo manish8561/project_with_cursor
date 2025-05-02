@@ -33,10 +33,12 @@ func setupTestHandler(t *testing.T) (*UserHandler, func()) {
 	}
 
 	// Create service
-	service := services.NewUserService(&config.MongoDBConfig{
+	mongoConfig := &config.MongoDBConfig{
 		Client:   client,
 		Database: "testdb",
-	})
+	}
+	jwtService := services.NewJWTService(config.NewJWTConfig("test-secret"))
+	service := services.NewUserService(mongoConfig, jwtService)
 
 	// Create handler
 	handler := NewUserHandler(service)
