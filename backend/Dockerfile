@@ -32,6 +32,8 @@ COPY --from=builder /app/main .
 # Copy Swagger documentation
 COPY --from=builder /app/docs ./docs
 
+COPY .env . 
+
 # Expose port
 EXPOSE 8080
 
