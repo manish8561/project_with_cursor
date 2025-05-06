@@ -45,8 +45,8 @@ func (s *UserService) Login(email, password string) (*models.LoginResponse, erro
 	}
 
 	return &models.LoginResponse{
-		Token: token,
-		User:  user,
+		Status: "success",
+		Token:  token,
 	}, nil
 }
 
@@ -78,7 +78,7 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 	}
 
 	return &models.RegisterResponse{
+		Status:  "success",
 		Message: "User registered successfully",
-		User:    newUser,
 	}, nil
 }

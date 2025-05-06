@@ -57,6 +57,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
+	response.Status = "success"
 	c.JSON(http.StatusOK, response)
 }
 
@@ -100,6 +101,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
+	response.Status = "success"
 	c.JSON(http.StatusCreated, response)
 }
 
