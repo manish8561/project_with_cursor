@@ -120,7 +120,6 @@ export class RegisterComponent {
         private router: Router
     ) {
         this.registerForm = this.fb.group({
-            name: ['', [Validators.required, Validators.minLength(2)]],
             email: ['', [Validators.required, Validators.email]],
             password: ['', [Validators.required, Validators.minLength(6)]]
         });
@@ -131,12 +130,16 @@ export class RegisterComponent {
             const userData: RegisterRequest = this.registerForm.value;
             this.authService.register(userData).subscribe({
                 next: (response) => {
-                    localStorage.setItem('token', response.token);
-                    localStorage.setItem('user', JSON.stringify(response.user));
-                    this.router.navigate(['/dashboard']);
+                    if (response.status === 'success') {
+                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('user', JSON.stringify(response.user));
+                        this.router.navigate(['/dashboard']);
+                    } else {
+                        this.errorMessage = 'Registration failed. Please try again.';
+                    }
                 },
                 error: (error) => {
-                    this.errorMessage = error.error?.error || 'Registration failed. Please try again.';
+                    this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
                 }
             });
         }

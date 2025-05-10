@@ -130,12 +130,16 @@ export class LoginComponent {
       const credentials: LoginRequest = this.loginForm.value;
       this.authService.login(credentials).subscribe({
         next: (response) => {
-          localStorage.setItem('token', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
-          this.router.navigate(['/dashboard']);
+          if (response.status === 'success') {
+            localStorage.setItem('token', response.token);
+            localStorage.setItem('user', JSON.stringify(response.user));
+            this.router.navigate(['/dashboard']);
+          } else {
+            this.errorMessage = 'Login failed. Please try again.';
+          }
         },
         error: (error) => {
-          this.errorMessage = error.error?.error || 'Login failed. Please try again.';
+          this.errorMessage = error.error?.message || 'Login failed. Please try again.';
         }
       });
     }

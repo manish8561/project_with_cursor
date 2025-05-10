@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { map } from 'rxjs/operators';
 
 export interface LoginRequest {
     email: string;
@@ -11,10 +12,10 @@ export interface LoginRequest {
 export interface RegisterRequest {
     email: string;
     password: string;
-    name: string;
 }
 
 export interface AuthResponse {
+    status: string;
     token: string;
     user: {
         id: string;
@@ -32,11 +33,25 @@ export class AuthService {
     constructor(private http: HttpClient) { }
 
     login(credentials: LoginRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/user/login`, credentials);
+        return this.http.post<AuthResponse>(`${this.apiUrl}/user/login`, credentials).pipe(
+            map(response => {
+                if (response.status === 'success') {
+                    return response;
+                }
+                throw new Error('Login failed');
+            })
+        );
     }
 
     register(userData: RegisterRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/user/register`, userData);
+        return this.http.post<AuthResponse>(`${this.apiUrl}/user/register`, userData).pipe(
+            map(response => {
+                if (response.status === 'success') {
+                    return response;
+                }
+                throw new Error('Registration failed');
+            })
+        );
     }
 
     logout(): void {
