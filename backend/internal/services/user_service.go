@@ -67,6 +67,7 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 	// Create new user
 	newUser := models.User{
 		ID:       primitive.NewObjectID().Hex(),
+		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password, // In real app, this would be hashed
 	}
@@ -81,4 +82,18 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 		Status:  "success",
 		Message: "User registered successfully",
 	}, nil
+}
+
+func (s *UserService) GetUserByID(id string) (*models.User, error) {
+	collection := s.mongoConfig.GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var user models.User
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
+	if err != nil {
+		return nil, errors.New("user not found")
+	}
+
+	return &user, nil
 }

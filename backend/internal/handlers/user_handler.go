@@ -105,6 +105,39 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// GetProfile returns the profile of the currently authenticated user
+// @Summary Get user profile
+// @Description Get the profile of the currently authenticated user
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.User
+// @Failure 401 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /user/profile [get]
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "Unauthorized"})
+		return
+	}
+
+	user, err := h.userService.GetUserByID(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "User not found"})
+		return
+	}
+
+	// Return user profile without password
+	profile := gin.H{
+		"id":    user.ID,
+		"name":  user.Name,
+		"email": user.Email,
+	}
+
+	c.JSON(http.StatusOK, profile)
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

@@ -10,6 +10,7 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+    name: string;
     email: string;
     password: string;
 }
@@ -70,5 +71,9 @@ export class AuthService {
     getUser(): any {
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
+    }
+
+    getProfile(): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/user/profile`);
     }
 } 

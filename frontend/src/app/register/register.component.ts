@@ -120,9 +120,22 @@ export class RegisterComponent {
         private router: Router
     ) {
         this.registerForm = this.fb.group({
+            name: ['', Validators.required],
             email: ['', [Validators.required, Validators.email]],
-            password: ['', [Validators.required, Validators.minLength(6)]]
+            password: ['', [Validators.required, Validators.minLength(6)]],
+            confirmPassword: ['', Validators.required]
+        }, {
+            validator: this.passwordMatchValidator
         });
+    }
+
+    passwordMatchValidator(form: FormGroup) {
+        const password = form.get('password');
+        const confirmPassword = form.get('confirmPassword');
+        if (password && confirmPassword && password.value !== confirmPassword.value) {
+            return { mismatch: true };
+        }
+        return null;
     }
 
     onSubmit() {

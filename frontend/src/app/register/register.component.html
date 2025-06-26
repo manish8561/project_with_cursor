@@ -3,6 +3,19 @@
     <h2>Create an Account</h2>
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
       <div class="form-group">
+        <label for="name">Name</label>
+        <input
+          type="text"
+          id="name"
+          formControlName="name"
+          placeholder="Enter your name"
+        />
+        <div class="error-message" *ngIf="registerForm.get('name')?.invalid && registerForm.get('name')?.touched">
+          <span *ngIf="registerForm.get('name')?.errors?.['required']">Name is required</span>
+        </div>
+      </div>
+
+      <div class="form-group">
         <label for="email">Email</label>
         <input
           type="email"

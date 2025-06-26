@@ -2,6 +2,7 @@ package models
 
 type User struct {
 	ID       string `json:"id" bson:"_id,omitempty"`
+	Name     string `json:"name" bson:"name"`
 	Email    string `json:"email" binding:"required,email" bson:"email"`
 	Password string `json:"password" binding:"required,min=6" bson:"password"`
 }
@@ -17,6 +18,7 @@ type LoginResponse struct {
 }
 
 type RegisterRequest struct {
+	Name            string `json:"name" binding:"required"`
 	Email           string `json:"email" binding:"required,email"`
 	Password        string `json:"password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=Password"`
