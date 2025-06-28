@@ -93,6 +93,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the profile of the currently authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/user/register": {
             "post": {
                 "description": "Register a new user with email, password, and name",
@@ -175,26 +212,30 @@ const docTemplate = `{
         "models.LoginResponse": {
             "type": "object",
             "properties": {
-                "token": {
+                "status": {
                     "type": "string"
                 },
-                "user": {
-                    "$ref": "#/definitions/models.User"
+                "token": {
+                    "type": "string"
                 }
             }
         },
         "models.RegisterRequest": {
             "type": "object",
             "required": [
-                "confirm_password",
+                "confirmPassword",
                 "email",
+                "name",
                 "password"
             ],
             "properties": {
-                "confirm_password": {
+                "confirmPassword": {
                     "type": "string"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "password": {
@@ -209,8 +250,8 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
-                "user": {
-                    "$ref": "#/definitions/models.User"
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -227,9 +268,15 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "name": {
+                    "type": "string"
+                },
                 "password": {
                     "type": "string",
                     "minLength": 6
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         }

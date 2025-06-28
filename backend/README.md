@@ -13,8 +13,13 @@ backend/
 │   │   └── user.go
 │   └── services/         # Business logic
 │       └── user_service.go
+├── docs/                 # Swagger API documentation
+│   ├── docs.go
+│   ├── swagger.json
+│   └── swagger.yaml
 ├── main.go              # Server entry point
 ├── go.mod              # Go module definition
+├── generate_swagger.sh # Swagger documentation generator
 └── .gitignore         # Git ignore rules
 ```
 
@@ -25,6 +30,7 @@ backend/
 - CORS middleware
 - Input validation
 - Health check endpoint
+- Swagger API documentation
 
 ## Prerequisites
 
@@ -52,10 +58,55 @@ go run main.go
 
 The server will start on port 8080.
 
+## API Documentation (Swagger)
+
+### Generate Swagger Documentation
+
+To regenerate the Swagger API documentation after making changes to the API:
+
+```bash
+# Make the script executable (first time only)
+chmod +x generate_swagger.sh
+
+# Generate the documentation
+./generate_swagger.sh
+```
+
+This will:
+- Install the `swag` tool if not already installed
+- Generate updated `docs.go`, `swagger.json`, and `swagger.yaml` files
+- Update the API documentation based on the current code
+
+### View API Documentation
+
+Once the server is running, you can view the interactive API documentation at:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+The Swagger UI provides:
+- Interactive API testing
+- Request/response examples
+- Schema definitions
+- Authentication information
+
+### Manual Swagger Generation
+
+If you prefer to generate Swagger docs manually:
+
+```bash
+# Install swag tool
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate documentation
+swag init -g main.go -o docs
+```
+
 ## API Endpoints
 
 ### Health Check
-- **GET** `/health`
+- **GET** `/api/health`
   - Returns server status
   - Response:
     ```json
@@ -65,7 +116,7 @@ The server will start on port 8080.
     ```
 
 ### User Authentication
-- **POST** `/api/login`
+- **POST** `/api/user/login`
   - Authenticates a user
   - Request body:
     ```json
@@ -77,17 +128,39 @@ The server will start on port 8080.
   - Success response:
     ```json
     {
-      "token": "dummy-token",
-      "user": {
-        "id": 1,
-        "email": "test@example.com"
-      }
+      "status": "success",
+      "token": "jwt-token-here"
     }
     ```
-  - Error response:
+
+- **POST** `/api/user/register`
+  - Registers a new user
+  - Request body:
     ```json
     {
-      "error": "Invalid credentials"
+      "name": "John Doe",
+      "email": "john@example.com",
+      "password": "password123",
+      "confirmPassword": "password123"
+    }
+    ```
+  - Success response:
+    ```json
+    {
+      "status": "success",
+      "message": "User registered successfully"
+    }
+    ```
+
+- **GET** `/api/user/profile`
+  - Get user profile (requires authentication)
+  - Headers: `Authorization: Bearer <token>`
+  - Success response:
+    ```json
+    {
+      "id": "user-id",
+      "name": "John Doe",
+      "email": "john@example.com"
     }
     ```
 
@@ -97,41 +170,53 @@ You can test the endpoints using curl:
 
 1. Health check:
    ```bash
-   curl http://localhost:8080/health
+   curl http://localhost:8080/api/health
    ```
 
 2. Login:
    ```bash
-   curl -X POST http://localhost:8080/api/login \
+   curl -X POST http://localhost:8080/api/user/login \
      -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"password123"}'
+   ```
+
+3. Register:
+   ```bash
+   curl -X POST http://localhost:8080/api/user/register \
+     -H "Content-Type: application/json" \
+     -d '{"name":"John Doe","email":"john@example.com","password":"password123","confirmPassword":"password123"}'
    ```
 
 ## Development
 
 ### Current Implementation
-- Uses in-memory user storage
-- Basic authentication without password hashing
-- Dummy token generation
+- MongoDB database integration
+- JWT token authentication
+- Password validation
+- User registration and login
+- Protected routes
+- Swagger API documentation
 
 ### Future Improvements
-1. JWT token generation
-2. Password hashing
-3. Database integration
-4. User registration
-5. Input validation middleware
-6. Unit tests
-7. API documentation
+1. Password hashing (bcrypt)
+2. Email verification
+3. Password reset functionality
+4. Role-based access control
+5. Rate limiting
+6. Comprehensive unit tests
+7. API versioning
 
 ## Security Notes
 
 ⚠️ **Important**: This is a development version. For production use:
-- Implement proper password hashing
-- Use secure JWT token generation
-- Add rate limiting
-- Implement proper database storage
-- Add input sanitization
+- Implement proper password hashing with bcrypt
+- Use secure JWT token generation with proper expiration
+- Add rate limiting and request throttling
+- Implement proper database connection pooling
+- Add input sanitization and validation
 - Use environment variables for sensitive data
+- Enable HTTPS
+- Add request logging and monitoring
 
 ## Contributing
 

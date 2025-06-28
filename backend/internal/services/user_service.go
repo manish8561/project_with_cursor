@@ -70,6 +70,7 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password, // In real app, this would be hashed
+		Status:   "active",
 	}
 
 	// Insert user into database

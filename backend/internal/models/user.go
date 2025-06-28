@@ -5,6 +5,7 @@ type User struct {
 	Name     string `json:"name" bson:"name"`
 	Email    string `json:"email" binding:"required,email" bson:"email"`
 	Password string `json:"password" binding:"required,min=6" bson:"password"`
+	Status   string `json:"status" bson:"status"`
 }
 
 type LoginRequest struct {
@@ -21,7 +22,7 @@ type RegisterRequest struct {
 	Name            string `json:"name" binding:"required"`
 	Email           string `json:"email" binding:"required,email"`
 	Password        string `json:"password" binding:"required,min=6"`
-	ConfirmPassword string `json:"confirm_password" binding:"required,eqfield=Password"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
 }
 
 type RegisterResponse struct {
