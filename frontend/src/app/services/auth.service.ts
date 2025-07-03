@@ -57,24 +57,31 @@ export class AuthService {
     }
 
     logout(): void {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        if (this.isBrowser()) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+        }
     }
 
     isLoggedIn(): boolean {
-        return !!localStorage.getItem('token');
+        return this.isBrowser() && !!localStorage.getItem('token');
     }
 
     getToken(): string | null {
-        return localStorage.getItem('token');
+        return this.isBrowser() ? localStorage.getItem('token') : null;
     }
 
     getUser(): any {
+        if (!this.isBrowser()) return null;
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
     }
 
     getProfile(): Observable<any> {
         return this.http.get<any>(`${this.apiUrl}/user/profile`);
+    }
+
+    isBrowser(): boolean {
+        return typeof window !== 'undefined' && !!window.localStorage;
     }
 } 
