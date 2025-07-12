@@ -1,8 +1,47 @@
-<h2 class="text-2xl font-bold mb-4">User Profile</h2>
-<div *ngIf="user && user.name && user.email" class="bg-white shadow rounded-lg p-6">
-  <p class="text-gray-700 font-semibold">Name: {{ user.name }}</p>
-  <p class="text-gray-700">Email: {{ user.email }}</p>
-</div>
-<div *ngIf="errorMessage" class="text-red-500 mt-4">
-  {{ errorMessage }}
+<div class="py-10">
+  <header>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-bold leading-tight text-gray-900">
+        User Profile
+      </h1>
+    </div>
+  </header>
+  <main>
+    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+      <div class="mt-8">
+        <div *ngIf="user && user.name && user.email" class="bg-white shadow rounded-lg p-6">
+          <div class="space-y-4">
+            <div>
+              <h3 class="text-lg font-medium text-gray-900">Personal Information</h3>
+              <p class="text-sm text-gray-500">Your account details and preferences</p>
+            </div>
+            <div class="border-t border-gray-200 pt-4">
+              <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                  <dt class="text-sm font-medium text-gray-500">Name</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ user.name }}</dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-medium text-gray-500">Email</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ user.email }}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="errorMessage" class="mt-4 bg-red-50 border border-red-200 rounded-md p-4">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-700">{{ errorMessage }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
