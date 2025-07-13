@@ -132,7 +132,6 @@ export class LoginComponent {
         next: (response) => {
           if (response.status === 'success') {
             localStorage.setItem('token', response.token);
-            localStorage.setItem('user', JSON.stringify(response.user));
             this.router.navigate(['/dashboard']);
           } else {
             this.errorMessage = 'Login failed. Please try again.';

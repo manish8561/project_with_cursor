@@ -145,7 +145,6 @@ export class RegisterComponent {
                 next: (response) => {
                     if (response.status === 'success') {
                         localStorage.setItem('token', response.token);
-                        localStorage.setItem('user', JSON.stringify(response.user));
                         this.router.navigate(['/dashboard']);
                     } else {
                         this.errorMessage = 'Registration failed. Please try again.';

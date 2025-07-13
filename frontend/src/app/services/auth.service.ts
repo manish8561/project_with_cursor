@@ -59,7 +59,6 @@ export class AuthService {
     logout(): void {
         if (this.isBrowser()) {
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
         }
     }
 
@@ -73,8 +72,7 @@ export class AuthService {
 
     getUser(): any {
         if (!this.isBrowser()) return null;
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
+        return null;
     }
 
     getProfile(): Observable<any> {
