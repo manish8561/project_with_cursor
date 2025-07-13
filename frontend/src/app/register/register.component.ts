@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -110,7 +110,7 @@ import { AuthService, RegisterRequest } from '../services/auth.service';
         }
     `]
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
     registerForm: FormGroup;
     errorMessage: string = '';
 
@@ -127,6 +127,12 @@ export class RegisterComponent {
         }, {
             validator: this.passwordMatchValidator
         });
+    }
+
+    ngOnInit(): void {
+        if (this.authService.isLoggedIn()) {
+            this.router.navigate(['/dashboard']);
+        }
     }
 
     passwordMatchValidator(form: FormGroup) {
