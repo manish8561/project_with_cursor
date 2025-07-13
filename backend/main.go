@@ -21,6 +21,20 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// EnableCORS is a middleware function that enables CORS for all routes
+func EnableCORS(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+	if c.Request.Method == "OPTIONS" {
+		c.AbortWithStatus(http.StatusOK)
+		return
+	}
+
+	c.Next()
+}
+
 // @title           Go Backend API
 // @version         1.0
 // @description     This is a sample Go backend server with authentication.
@@ -60,18 +74,7 @@ func main() {
 	r := gin.Default()
 
 	// Enable CORS
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusOK)
-			return
-		}
-
-		c.Next()
-	})
+	r.Use(EnableCORS)
 
 	// Initialize services with MongoDB and JWT
 	userService := services.NewUserService(mongoConfig, jwtService)
