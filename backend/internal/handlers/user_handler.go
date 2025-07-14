@@ -130,9 +130,10 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 
 	// Return user profile without password
 	profile := gin.H{
-		"id":    user.ID,
-		"name":  user.Name,
-		"email": user.Email,
+		"name":      user.Name,
+		"email":     user.Email,
+		"createdAt": user.CreatedAt,
+		"updatedAt": user.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, profile)
