@@ -19,14 +19,12 @@ func NewJWTService(jwtConfig *config.JWTConfig) *JWTService {
 
 type Claims struct {
 	UserID string `json:"user_id"`
-	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
 
-func (s *JWTService) GenerateToken(userID, email string) (string, error) {
+func (s *JWTService) GenerateToken(userID string) (string, error) {
 	claims := Claims{
 		UserID: userID,
-		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
