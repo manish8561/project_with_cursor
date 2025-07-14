@@ -66,11 +66,13 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 
 	// Create new user
 	newUser := models.User{
-		ID:       primitive.NewObjectID().Hex(),
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: req.Password, // In real app, this would be hashed
-		Status:   "active",
+		ID:        primitive.NewObjectID().Hex(),
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  req.Password, // In real app, this would be hashed
+		Status:    "active",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	// Insert user into database

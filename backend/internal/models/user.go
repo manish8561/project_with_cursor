@@ -1,11 +1,15 @@
 package models
 
+import "time"
+
 type User struct {
-	ID       string `json:"id" bson:"_id,omitempty"`
-	Name     string `json:"name" bson:"name"`
-	Email    string `json:"email" binding:"required,email" bson:"email"`
-	Password string `json:"password" binding:"required,min=6" bson:"password"`
-	Status   string `json:"status" bson:"status"`
+	ID        string    `json:"id" bson:"_id,omitempty"`
+	Name      string    `json:"name" bson:"name"`
+	Email     string    `json:"email" binding:"required,email" bson:"email"`
+	Password  string    `json:"password" binding:"required,min=6" bson:"password"`
+	Status    string    `json:"status" bson:"status"`
+	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
 type LoginRequest struct {
