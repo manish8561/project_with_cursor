@@ -53,6 +53,8 @@ definitions:
     type: object
   models.User:
     properties:
+      createdAt:
+        type: string
       email:
         type: string
       id:
@@ -64,9 +66,20 @@ definitions:
         type: string
       status:
         type: string
+      updatedAt:
+        type: string
     required:
     - email
     - password
+    type: object
+  models.UserListResponse:
+    properties:
+      total:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
     type: object
 host: localhost:8080
 info:
@@ -97,6 +110,34 @@ paths:
       summary: Check server health
       tags:
       - health
+  /user/list:
+    get:
+      description: Get a paginated list of users
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: List users
+      tags:
+      - user
   /user/login:
     post:
       consumes:
