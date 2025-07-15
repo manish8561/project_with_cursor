@@ -150,3 +150,47 @@ func TestUserService_Register(t *testing.T) {
 		})
 	}
 }
+
+func TestUserService_ListUsers(t *testing.T) {
+	client, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Create services
+	mongoConfig := &config.MongoDBConfig{
+		Client:   client,
+		Database: "testdb",
+	}
+	jwtService := NewJWTService(config.NewJWTConfig("test-secret"))
+	service := NewUserService(mongoConfig, jwtService)
+
+	collection := client.Database("testdb").Collection("users")
+	// Insert users with different roles
+	users := []models.User{
+		{ID: "1", Name: "Alice", Email: "alice@example.com", Password: "pass", Role: "customer"},
+		{ID: "2", Name: "Bob", Email: "bob@example.com", Password: "pass", Role: "admin"},
+		{ID: "3", Name: "Carol", Email: "carol@example.com", Password: "pass", Role: "customer"},
+	}
+	for _, u := range users {
+		_, err := collection.InsertOne(context.Background(), u)
+		if err != nil {
+			t.Fatalf("Failed to insert user: %v", err)
+		}
+	}
+
+	// Test pagination and filtering
+	result, total, err := service.ListUsers(1, 10)
+	if err != nil {
+		t.Fatalf("ListUsers failed: %v", err)
+	}
+	if total != 2 {
+		t.Errorf("Expected total 2 customers, got %d", total)
+	}
+	if len(result) != 2 {
+		t.Errorf("Expected 2 customers in result, got %d", len(result))
+	}
+	for _, u := range result {
+		if u.Role != "customer" {
+			t.Errorf("Non-customer user returned: %+v", u)
+		}
+	}
+}

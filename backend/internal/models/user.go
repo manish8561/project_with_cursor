@@ -8,6 +8,7 @@ type User struct {
 	Email     string    `json:"email" binding:"required,email" bson:"email"`
 	Password  string    `json:"password" binding:"required,min=6" bson:"password"`
 	Status    string    `json:"status" bson:"status"`
+	Role      string    `json:"role" bson:"role"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
 }
