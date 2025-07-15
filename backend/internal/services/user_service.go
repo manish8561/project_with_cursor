@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type UserService struct {
@@ -99,4 +100,37 @@ func (s *UserService) GetUserByID(id string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+// ListUsers returns a paginated list of users and the total count
+func (s *UserService) ListUsers(page, pageSize int) ([]models.User, int64, error) {
+	collection := s.mongoConfig.GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	skip := int64((page - 1) * pageSize)
+	limit := int64(pageSize)
+
+	findOptions := options.Find().SetSkip(skip).SetLimit(limit)
+	cursor, err := collection.Find(ctx, bson.D{}, findOptions)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []models.User
+	for cursor.Next(ctx) {
+		var user models.User
+		if err := cursor.Decode(&user); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, user)
+	}
+
+	total, err := collection.CountDocuments(ctx, bson.D{})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
 }

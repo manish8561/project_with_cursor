@@ -33,3 +33,9 @@ type RegisterResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 }
+
+// UserListResponse is the response for paginated user list
+type UserListResponse struct {
+	Users []User `json:"users"`
+	Total int64  `json:"total"`
+}
