@@ -111,8 +111,9 @@ func (s *UserService) ListUsers(page, pageSize int) ([]models.User, int64, error
 	skip := int64((page - 1) * pageSize)
 	limit := int64(pageSize)
 
+	filter := bson.M{"role": "customer"}
 	findOptions := options.Find().SetSkip(skip).SetLimit(limit)
-	cursor, err := collection.Find(ctx, bson.D{}, findOptions)
+	cursor, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -127,7 +128,7 @@ func (s *UserService) ListUsers(page, pageSize int) ([]models.User, int64, error
 		users = append(users, user)
 	}
 
-	total, err := collection.CountDocuments(ctx, bson.D{})
+	total, err := collection.CountDocuments(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
