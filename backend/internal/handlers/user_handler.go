@@ -111,7 +111,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 // @Description Get the profile of the currently authenticated user
 // @Tags user
 // @Produce json
-// @Security BearerAuth
+// @Security ApiKeyAuth
 // @Success 200 {object} models.User
 // @Failure 401 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
@@ -145,7 +145,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 // @Description Get a paginated list of users
 // @Tags user
 // @Produce json
-// @Security BearerAuth
+// @Security ApiKeyAuth
 // @Param page query int false "Page number" default(1)
 // @Param pageSize query int false "Page size" default(10)
 // @Success 200 {object} models.UserListResponse
