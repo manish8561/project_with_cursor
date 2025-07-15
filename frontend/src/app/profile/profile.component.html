@@ -25,6 +25,14 @@
                   <dt class="text-sm font-medium text-gray-500">Email</dt>
                   <dd class="mt-1 text-sm text-gray-900">{{ user.email }}</dd>
                 </div>
+                <div *ngIf="user.createdAt">
+                  <dt class="text-sm font-medium text-gray-500">Created At</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ user.createdAt | date:'medium' }}</dd>
+                </div>
+                <div *ngIf="user.updatedAt">
+                  <dt class="text-sm font-medium text-gray-500">Updated At</dt>
+                  <dd class="mt-1 text-sm text-gray-900">{{ user.updatedAt | date:'medium' }}</dd>
+                </div>
               </dl>
             </div>
           </div>
