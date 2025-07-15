@@ -128,6 +128,7 @@ func main() {
 			authRoutes.Use(authMiddleware)
 			{
 				authRoutes.GET("/profile", userHandler.GetProfile)
+				authRoutes.GET("/list", userHandler.ListUsers)
 			}
 		}
 	}

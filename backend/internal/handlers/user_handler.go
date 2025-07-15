@@ -145,6 +145,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 // @Description Get a paginated list of users
 // @Tags user
 // @Produce json
+// @Security BearerAuth
 // @Param page query int false "Page number" default(1)
 // @Param pageSize query int false "Page size" default(10)
 // @Success 200 {object} models.UserListResponse

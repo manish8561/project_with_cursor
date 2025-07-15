@@ -49,6 +49,11 @@ const docTemplate = `{
         },
         "/user/list": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get a paginated list of users",
                 "produces": [
                     "application/json"
