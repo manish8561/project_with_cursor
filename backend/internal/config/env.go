@@ -7,13 +7,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds environment configuration for the application.
 type Config struct {
-	Port      string
-	JWTSecret string
-	MongoURI  string
-	MongoDB   string
+	Port      string // Port on which the server runs
+	JWTSecret string // Secret key for JWT authentication
+	MongoURI  string // MongoDB connection URI
+	MongoDB   string // MongoDB database name
 }
 
+// LoadConfig loads environment variables from a .env file (if present) and returns a Config struct.
+// If the .env file is not found, it uses default values for each configuration field.
 func LoadConfig() *Config {
 	err := godotenv.Load()
 	if err != nil {
@@ -28,6 +31,8 @@ func LoadConfig() *Config {
 	}
 }
 
+// getEnvWithDefault returns the value of the environment variable for the given key,
+// or the provided default value if the environment variable is not set.
 func getEnvWithDefault(key, defaultValue string) string {
 	value := os.Getenv(key)
 	if value == "" {

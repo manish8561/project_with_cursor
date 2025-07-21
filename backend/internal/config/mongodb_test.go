@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestNewMongoDBConfig tests the creation of a MongoDBConfig with environment variables.
 func TestNewMongoDBConfig(t *testing.T) {
 	// Set test environment variables
 	os.Setenv("MONGODB_USERNAME", "admin")
