@@ -1,3 +1,7 @@
+// Package services provides business logic for authentication and other core features.
+//
+// This file implements user management functionality including registration, login,
+// and user data retrieval operations with MongoDB integration.
 package services
 
 import (
@@ -12,11 +16,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// UserService handles user-related business logic including authentication,
+// registration, and user data management operations.
 type UserService struct {
 	mongoConfig *config.MongoDBConfig
 	jwtService  *JWTService
 }
 
+// NewUserService creates a new UserService with the provided MongoDB configuration
+// and JWT service for token generation.
 func NewUserService(mongoConfig *config.MongoDBConfig, jwtService *JWTService) *UserService {
 	return &UserService{
 		mongoConfig: mongoConfig,
@@ -24,11 +32,13 @@ func NewUserService(mongoConfig *config.MongoDBConfig, jwtService *JWTService) *
 	}
 }
 
-// GetMongoConfig returns the MongoDB configuration
+// GetMongoConfig returns the MongoDB configuration used by this service.
 func (s *UserService) GetMongoConfig() *config.MongoDBConfig {
 	return s.mongoConfig
 }
 
+// Login authenticates a user with the provided email and password.
+// Returns a JWT token upon successful authentication or an error if credentials are invalid.
 func (s *UserService) Login(email, password string) (*models.LoginResponse, error) {
 	collection := s.mongoConfig.GetCollection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -51,6 +61,8 @@ func (s *UserService) Login(email, password string) (*models.LoginResponse, erro
 	}, nil
 }
 
+// Register creates a new user account with the provided registration details.
+// Returns a success response if registration is successful, or an error if the user already exists.
 func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResponse, error) {
 	collection := s.mongoConfig.GetCollection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -88,6 +100,8 @@ func (s *UserService) Register(req models.RegisterRequest) (*models.RegisterResp
 	}, nil
 }
 
+// GetUserByID retrieves a user by their unique identifier.
+// Returns the user data if found, or an error if the user doesn't exist.
 func (s *UserService) GetUserByID(id string) (*models.User, error) {
 	collection := s.mongoConfig.GetCollection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -102,7 +116,8 @@ func (s *UserService) GetUserByID(id string) (*models.User, error) {
 	return &user, nil
 }
 
-// ListUsers returns a paginated list of users and the total count
+// ListUsers returns a paginated list of users and the total count.
+// Only returns users with role "customer" and supports pagination with page and pageSize parameters.
 func (s *UserService) ListUsers(page, pageSize int) ([]models.User, int64, error) {
 	collection := s.mongoConfig.GetCollection("users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
