@@ -82,7 +82,7 @@ microservices/
 1. **Start all services with Docker Compose**:
    ```bash
    cd backend/microservices
-   docker-compose up -d
+   docker compose up -d
    ```
 
 2. **Access the services**:
