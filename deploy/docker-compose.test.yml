@@ -1,54 +1,108 @@
 version: '3.8'
 
 services:
+  # MongoDB Database for Testing
   mongodb:
     image: mongo:latest
+    container_name: mongodb-test
+    restart: unless-stopped
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password123
-      - MONGO_INITDB_DATABASE=testdb
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: testdb
     volumes:
       - mongodb_test_data:/data/db
     networks:
-      - app-network
+      - microservices-test-network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
 
-  backend:
+  # Auth Service for Testing
+  auth-service:
     build:
-      context: ../backend
+      context: ../backend/microservices/auth-service
       dockerfile: Dockerfile
+    container_name: auth-service-test
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
-      - PORT=8080
+      - PORT=8081
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017
+      - MONGO_DB=testdb
+      - JWT_SECRET=test-jwt-secret-key-for-testing
       - GIN_MODE=release
-      - MONGODB_USERNAME=admin
-      - MONGODB_PASSWORD=password123
-      - MONGODB_HOST=mongodb
-      - MONGODB_PORT=27017
-      - MONGODB_DATABASE=testdb
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
-      - app-network
+      - microservices-test-network
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8081/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # User Service for Testing
+  user-service:
+    build:
+      context: ../backend/microservices/user-service
+      dockerfile: Dockerfile
+    container_name: user-service-test
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - MONGO_URI=mongodb://admin:password123@mongodb:27017
+      - MONGO_DB=testdb
+      - GIN_MODE=release
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - microservices-test-network
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8082/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway for Testing
+  api-gateway:
+    build:
+      context: ../backend/microservices/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway-test
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+      - GIN_MODE=release
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    networks:
+      - microservices-test-network
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: unless-stopped
-
-networks:
-  app-network:
-    driver: bridge
 
 volumes:
   mongodb_test_data:
+
+networks:
+  microservices-test-network:
+    driver: bridge

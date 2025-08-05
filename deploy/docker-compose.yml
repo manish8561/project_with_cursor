@@ -1,65 +1,81 @@
 version: '3.8'
 
 services:
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    ports:
-      - "80:80"
-    environment:
-      - VITE_API_URL=http://backend:8080
-    depends_on:
-      - backend
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:80" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    env_file:
-      - ../backend/.env
-    depends_on:
-      - mongodb
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/api/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
+  # MongoDB Database
   mongodb:
     image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password123
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: auth_db
     volumes:
       - mongodb_data:/data/db
     networks:
-      - app-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
+      - microservices-network
 
-networks:
-  app-network:
-    driver: bridge
+  # Auth Service
+  auth-service:
+    build:
+      context: ../backend/microservices/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - MONGO_URI=mongodb://admin:password@mongodb:27017
+      - MONGO_DB=auth_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    depends_on:
+      - mongodb
+    networks:
+      - microservices-network
+
+  # User Service
+  user-service:
+    build:
+      context: ../backend/microservices/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - MONGO_URI=mongodb://admin:password@mongodb:27017
+      - MONGO_DB=auth_db
+    depends_on:
+      - mongodb
+    networks:
+      - microservices-network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ../backend/microservices/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - USER_SERVICE_URL=http://user-service:8082
+    depends_on:
+      - auth-service
+      - user-service
+    networks:
+      - microservices-network
 
 volumes:
   mongodb_data:
+
+networks:
+  microservices-network:
+    driver: bridge 
