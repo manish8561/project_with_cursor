@@ -54,6 +54,48 @@ A full-stack application with Angular frontend and Go microservices backend.
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
 
+## API Documentation
+
+### Swagger Documentation
+
+The API Gateway provides centralized Swagger documentation for all microservices:
+
+- **Swagger UI**: http://localhost:8080/swagger/index.html
+- **API Documentation**: http://localhost:8080/docs
+- **OpenAPI JSON**: http://localhost:8080/swagger/doc.json
+- **OpenAPI YAML**: http://localhost:8080/swagger/doc.yaml
+
+### Documentation Features
+
+✅ **Centralized Documentation**: Single entry point for all API documentation
+✅ **Interactive Testing**: Test APIs directly from the Swagger UI
+✅ **Authentication Support**: JWT Bearer token authentication
+✅ **Request/Response Examples**: Detailed examples for all endpoints
+✅ **Error Codes**: Comprehensive error response documentation
+✅ **API Versioning**: Version control for API changes
+
+### Documentation Structure
+
+The API documentation is organized by service:
+
+#### Authentication Service (`/api/auth`)
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration  
+- `POST /api/auth/validate` - Token validation
+
+#### User Service (`/api/users`)
+- `GET /api/users/profile/:id` - Get user profile
+- `GET /api/users/list` - List users (paginated)
+- `PUT /api/users/profile/:id` - Update user profile
+
+### Why Centralized Documentation?
+
+1. **Single Source of Truth**: All API documentation in one place
+2. **Consistent Experience**: Uniform documentation across all services
+3. **Easier Maintenance**: One documentation to update
+4. **Better Developer Experience**: No need to navigate multiple Swagger UIs
+5. **API Gateway Integration**: Documentation matches the actual API Gateway routes
+
 ## Microservices Architecture
 
 ### Services Overview
@@ -73,6 +115,7 @@ A full-stack application with Angular frontend and Go microservices backend.
    - Request routing to appropriate services
    - Authentication middleware
    - CORS handling
+   - **Centralized API Documentation**
 
 4. **Frontend** (Port 4200)
    - Angular application
@@ -303,6 +346,7 @@ USER_SERVICE_URL=http://user-service:8082
 - **Health Checks**: Service health monitoring
 - **CORS Support**: Cross-origin resource sharing
 - **Protected Routes**: Authentication-based route protection
+- **Centralized API Documentation**: Swagger/OpenAPI documentation
 
 ## Future Enhancements
 
@@ -312,7 +356,7 @@ USER_SERVICE_URL=http://user-service:8082
 4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
 5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
 6. **Message Queues**: Add async communication (RabbitMQ, Kafka)
-7. **API Documentation**: Add Swagger/OpenAPI documentation
+7. **API Documentation**: ✅ **COMPLETED** - Swagger/OpenAPI documentation
 8. **Testing**: Add comprehensive test suites for each service
 
 ## Documentation
