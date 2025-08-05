@@ -25,7 +25,7 @@ services:
   # Auth Service for Testing
   auth-service:
     build:
-      context: ../backend/microservices/auth-service
+      context: ../backend/auth-service
       dockerfile: Dockerfile
     container_name: auth-service-test
     restart: unless-stopped
@@ -51,7 +51,7 @@ services:
   # User Service for Testing
   user-service:
     build:
-      context: ../backend/microservices/user-service
+      context: ../backend/user-service
       dockerfile: Dockerfile
     container_name: user-service-test
     restart: unless-stopped
