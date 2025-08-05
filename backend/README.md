@@ -40,7 +40,7 @@ The application has been decomposed into the following microservices:
 ## Directory Structure
 
 ```
-microservices/
+backend/
 ├── auth-service/
 │   ├── main.go
 │   ├── go.mod
@@ -67,7 +67,6 @@ microservices/
 │       ├── config/
 │       ├── handlers/
 │       └── middleware/
-├── docker-compose.yml
 └── README.md
 ```
 
@@ -81,11 +80,25 @@ microservices/
 
 1. **Start all services with Docker Compose**:
    ```bash
-   cd backend/microservices
-   docker compose up -d
+   cd deploy
+   docker compose up --build
    ```
 
 2. **Access the services**:
+   - API Gateway: http://localhost:8080
+   - Auth Service: http://localhost:8081
+   - User Service: http://localhost:8082
+   - MongoDB: localhost:27017
+
+### Testing Environment
+
+1. **Start test environment**:
+   ```bash
+   cd deploy
+   docker compose -f docker-compose.test.yml up --build
+   ```
+
+2. **Access test services**:
    - API Gateway: http://localhost:8080
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
@@ -112,12 +125,23 @@ microservices/
    ```
 
 2. **Environment Variables**:
-   - `PORT`: Service port (default: 8080, 8081, 8082)
-   - `MONGO_URI`: MongoDB connection string
-   - `MONGO_DB`: Database name
-   - `JWT_SECRET`: Secret key for JWT tokens
-   - `AUTH_SERVICE_URL`: Auth service URL (for API Gateway)
-   - `USER_SERVICE_URL`: User service URL (for API Gateway)
+   ```bash
+   # Auth Service
+   PORT=8081
+   MONGO_URI=mongodb://localhost:27017
+   MONGO_DB=auth_db
+   JWT_SECRET=your-secret-key
+
+   # User Service
+   PORT=8082
+   MONGO_URI=mongodb://localhost:27017
+   MONGO_DB=auth_db
+
+   # API Gateway
+   PORT=8080
+   AUTH_SERVICE_URL=http://localhost:8081
+   USER_SERVICE_URL=http://localhost:8082
+   ```
 
 ## API Endpoints
 
@@ -150,6 +174,52 @@ curl -X GET http://localhost:8080/api/users/list \
   -H "Authorization: Bearer your-jwt-token"
 ```
 
+## Docker Commands
+
+### Production
+```bash
+# Start all services
+cd deploy
+docker compose up --build
+
+# Stop services
+docker compose down
+
+# View logs
+docker compose logs
+
+# View specific service logs
+docker compose logs auth-service
+docker compose logs user-service
+docker compose logs api-gateway
+```
+
+### Testing
+```bash
+# Start test environment
+cd deploy
+docker compose -f docker-compose.test.yml up --build
+
+# Stop test services
+docker compose -f docker-compose.test.yml down
+
+# View test logs
+docker compose -f docker-compose.test.yml logs
+```
+
+### Individual Services
+```bash
+# Build individual services
+docker build -t auth-service auth-service/
+docker build -t user-service user-service/
+docker build -t api-gateway api-gateway/
+
+# Run individual services
+docker run -p 8081:8081 auth-service
+docker run -p 8082:8082 user-service
+docker run -p 8080:8080 api-gateway
+```
+
 ## Benefits of This Architecture
 
 1. **Scalability**: Each service can be scaled independently
@@ -176,16 +246,20 @@ curl -X GET http://localhost:8080/api/users/list \
 1. **Port conflicts**: Ensure ports 8080, 8081, 8082, and 27017 are available
 2. **MongoDB connection**: Check if MongoDB is running and accessible
 3. **Service communication**: Verify service URLs in API Gateway configuration
+4. **Authentication errors**: Check JWT secret configuration
 
 ### Logs
 ```bash
 # View all service logs
-docker-compose logs
+docker compose logs
 
 # View specific service logs
-docker-compose logs auth-service
-docker-compose logs user-service
-docker-compose logs api-gateway
+docker compose logs auth-service
+docker compose logs user-service
+docker compose logs api-gateway
+
+# Follow logs in real-time
+docker compose logs -f
 ```
 
 ### Health Checks
@@ -194,4 +268,54 @@ docker-compose logs api-gateway
 curl http://localhost:8080/health  # API Gateway
 curl http://localhost:8081/health  # Auth Service
 curl http://localhost:8082/health  # User Service
+```
+
+## Environment Variables
+
+### Production Environment
+```bash
+# MongoDB
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_INITDB_DATABASE=auth_db
+
+# Auth Service
+PORT=8081
+MONGO_URI=mongodb://admin:password@mongodb:27017
+MONGO_DB=auth_db
+JWT_SECRET=your-super-secret-jwt-key
+
+# User Service
+PORT=8082
+MONGO_URI=mongodb://admin:password@mongodb:27017
+MONGO_DB=auth_db
+
+# API Gateway
+PORT=8080
+AUTH_SERVICE_URL=http://auth-service:8081
+USER_SERVICE_URL=http://user-service:8082
+```
+
+### Test Environment
+```bash
+# MongoDB
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password123
+MONGO_INITDB_DATABASE=testdb
+
+# Auth Service
+PORT=8081
+MONGO_URI=mongodb://admin:password123@mongodb:27017
+MONGO_DB=testdb
+JWT_SECRET=test-jwt-secret-key-for-testing
+
+# User Service
+PORT=8082
+MONGO_URI=mongodb://admin:password123@mongodb:27017
+MONGO_DB=testdb
+
+# API Gateway
+PORT=8080
+AUTH_SERVICE_URL=http://auth-service:8081
+USER_SERVICE_URL=http://user-service:8082
 ``` 

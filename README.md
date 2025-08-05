@@ -1,153 +1,321 @@
-# Full Stack Project
+# Full Stack Microservices Project
 
-A full-stack application with Angular frontend and Go backend.
+A full-stack application with Angular frontend and Go microservices backend.
 
 ## Project Structure
 
 ```
 .
-├── backend/           # Go backend service
+├── backend/           # Go microservices backend
+│   ├── auth-service/  # Authentication service
+│   ├── user-service/  # User management service
+│   ├── api-gateway/   # API Gateway service
+│   └── README.md      # Backend documentation
 ├── frontend/          # Angular frontend
 └── deploy/           # Deployment configurations
-    └── docker-compose.yml
+    ├── docker-compose.yml      # Production deployment
+    └── docker-compose.test.yml # Testing deployment
 ```
 
 ## Prerequisites
 
-- Docker
-- Docker Compose
+- Docker and Docker Compose
 - Node.js (for frontend development)
-- Go (for backend development)
+- Go 1.21+ (for backend development)
+
+## Quick Start
+
+### Using Docker Compose (Recommended)
+
+1. **Start all services**:
+   ```bash
+   cd deploy
+   docker compose up --build
+   ```
+
+2. **Access the services**:
+   - Frontend: http://localhost:4200
+   - API Gateway: http://localhost:8080
+   - Auth Service: http://localhost:8081
+   - User Service: http://localhost:8082
+   - MongoDB: localhost:27017
+
+### Testing Environment
+
+1. **Start test environment**:
+   ```bash
+   cd deploy
+   docker compose -f docker-compose.test.yml up --build
+   ```
+
+2. **Access test services**:
+   - API Gateway: http://localhost:8080
+   - Auth Service: http://localhost:8081
+   - User Service: http://localhost:8082
+   - MongoDB: localhost:27017
+
+## Microservices Architecture
+
+### Services Overview
+
+1. **Auth Service** (Port 8081)
+   - User authentication and registration
+   - JWT token management
+   - Password hashing and validation
+
+2. **User Service** (Port 8082)
+   - User profile management
+   - User data CRUD operations
+   - User search and listing
+
+3. **API Gateway** (Port 8080)
+   - Single entry point for all requests
+   - Request routing to appropriate services
+   - Authentication middleware
+   - CORS handling
+
+4. **Frontend** (Port 4200)
+   - Angular application
+   - User interface for all operations
+   - Authentication and protected routes
+
+### Database
+- **MongoDB**: Shared database across all services
+- **Collections**: `users` (shared between auth and user services)
 
 ## Development Setup
 
-### Backend
-```bash
-cd backend
-go mod tidy
-go run main.go
-```
+### Backend Development
 
-### Frontend
+1. **Individual Service Development**:
+   ```bash
+   # Auth Service
+   cd backend/auth-service
+   go mod tidy
+   go run main.go
+
+   # User Service
+   cd backend/user-service
+   go mod tidy
+   go run main.go
+
+   # API Gateway
+   cd backend/api-gateway
+   go mod tidy
+   go run main.go
+   ```
+
+2. **Environment Variables**:
+   ```bash
+   # Auth Service
+   PORT=8081
+   MONGO_URI=mongodb://localhost:27017
+   MONGO_DB=auth_db
+   JWT_SECRET=your-secret-key
+
+   # User Service
+   PORT=8082
+   MONGO_URI=mongodb://localhost:27017
+   MONGO_DB=auth_db
+
+   # API Gateway
+   PORT=8080
+   AUTH_SERVICE_URL=http://localhost:8081
+   USER_SERVICE_URL=http://localhost:8082
+   ```
+
+### Frontend Development
+
 ```bash
 cd frontend
 npm install
 ng serve
 ```
 
-## Docker Deployment
-
-### Using Docker Compose
-
-1. Build and start all services:
-```bash
-cd deploy
-docker-compose up --build
-```
-
-2. Access the services:
-- Frontend: http://localhost
-- Backend API: http://localhost:8080
-
-### Individual Services
-
-#### Backend
-```bash
-cd backend
-docker build -t backend .
-docker run -p 8080:8080 backend
-```
-
-#### Frontend
-```bash
-cd frontend
-docker build -t frontend .
-docker run -p 80:80 frontend
-```
-
 ## API Endpoints
 
-### Backend
-- Health Check: `GET /health`
-- Login: `POST /api/login`
-- Register: `POST /api/register`
+### Authentication (via API Gateway)
+```bash
+# Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password"}'
 
-### Frontend
-- Login Page: `/login`
-- Dashboard: `/dashboard`
+# Register
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"user@example.com","password":"password","confirmPassword":"password"}'
+
+# Validate Token
+curl -X POST http://localhost:8080/api/auth/validate \
+  -H "Content-Type: application/json" \
+  -d '{"token":"your-jwt-token"}'
+```
+
+### User Management (via API Gateway)
+```bash
+# Get user profile (requires authentication)
+curl -X GET http://localhost:8080/api/users/profile/user-id \
+  -H "Authorization: Bearer your-jwt-token"
+
+# List users (requires authentication)
+curl -X GET http://localhost:8080/api/users/list \
+  -H "Authorization: Bearer your-jwt-token"
+```
+
+## Docker Commands
+
+### Production
+```bash
+# Start all services
+cd deploy
+docker compose up --build
+
+# Stop services
+docker compose down
+
+# View logs
+docker compose logs
+
+# View specific service logs
+docker compose logs auth-service
+docker compose logs user-service
+docker compose logs api-gateway
+```
+
+### Testing
+```bash
+# Start test environment
+cd deploy
+docker compose -f docker-compose.test.yml up --build
+
+# Stop test services
+docker compose -f docker-compose.test.yml down
+
+# View test logs
+docker compose -f docker-compose.test.yml logs
+```
+
+### Individual Services
+```bash
+# Build individual services
+docker build -t auth-service backend/auth-service/
+docker build -t user-service backend/user-service/
+docker build -t api-gateway backend/api-gateway/
+
+# Run individual services
+docker run -p 8081:8081 auth-service
+docker run -p 8082:8082 user-service
+docker run -p 8080:8080 api-gateway
+```
+
+## Health Checks
+
+```bash
+# Check service health
+curl http://localhost:8080/health  # API Gateway
+curl http://localhost:8081/health  # Auth Service
+curl http://localhost:8082/health  # User Service
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port conflicts**: Ensure ports 8080, 8081, 8082, 4200, and 27017 are available
+2. **MongoDB connection**: Check if MongoDB is running and accessible
+3. **Service communication**: Verify service URLs in API Gateway configuration
+4. **Authentication errors**: Check JWT secret configuration
+
+### Logs and Debugging
+```bash
+# View all service logs
+docker compose logs
+
+# View specific service logs
+docker compose logs auth-service
+docker compose logs user-service
+docker compose logs api-gateway
+
+# Follow logs in real-time
+docker compose logs -f
+```
 
 ## Environment Variables
 
-### Backend
-- `PORT`: Server port (default: 8080)
-- `GIN_MODE`: Gin mode (debug/release)
-
-### Frontend
-- Configured through nginx.conf
-
-## Development Notes
-
-- Backend runs in debug mode by default
-- Frontend uses Angular's development server
-- Docker setup includes health checks and automatic restarts
-- Services are connected through a Docker network
-
-## Production Considerations
-
-- Set `GIN_MODE=release` for production
-- Use proper environment variables
-- Implement proper security measures
-- Configure proper logging
-- Set up monitoring
-
-## Running with Docker
-
-To run the entire application (frontend, backend, and MongoDB) using Docker:
-
+### Production Environment
 ```bash
-docker-compose up --build
+# MongoDB
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_INITDB_DATABASE=auth_db
+
+# Auth Service
+PORT=8081
+MONGO_URI=mongodb://admin:password@mongodb:27017
+MONGO_DB=auth_db
+JWT_SECRET=your-super-secret-jwt-key
+
+# User Service
+PORT=8082
+MONGO_URI=mongodb://admin:password@mongodb:27017
+MONGO_DB=auth_db
+
+# API Gateway
+PORT=8080
+AUTH_SERVICE_URL=http://auth-service:8081
+USER_SERVICE_URL=http://user-service:8082
 ```
 
-This will:
-- Build and start the backend service on port 8080
-- Build and start the frontend service on port 80
-- Start MongoDB on port 27017
-- Set up the necessary networking between services
-
-To stop the services:
-
+### Test Environment
 ```bash
-docker-compose down
+# MongoDB
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=password123
+MONGO_INITDB_DATABASE=testdb
+
+# Auth Service
+PORT=8081
+MONGO_URI=mongodb://admin:password123@mongodb:27017
+MONGO_DB=testdb
+JWT_SECRET=test-jwt-secret-key-for-testing
+
+# User Service
+PORT=8082
+MONGO_URI=mongodb://admin:password123@mongodb:27017
+MONGO_DB=testdb
+
+# API Gateway
+PORT=8080
+AUTH_SERVICE_URL=http://auth-service:8081
+USER_SERVICE_URL=http://user-service:8082
 ```
-
-To stop the services and remove volumes:
-
-```bash
-docker-compose down -v
-```
-
-## Development
-
-### Frontend
-
-See [frontend/README.md](frontend/README.md) for frontend-specific instructions.
-
-### Backend
-
-See [backend/README.md](backend/README.md) for backend-specific instructions.
-
-## Project Structure
-
-- `frontend/` - Angular frontend application
-- `backend/` - Go backend application
-- `docker-compose.yml` - Docker Compose configuration
-- `frontend/Dockerfile` - Frontend Docker configuration
-- `backend/Dockerfile` - Backend Docker configuration
 
 ## Features
 
-- User authentication (login/register)
-- Protected routes
-- MongoDB database
-- Dockerized deployment
-- Nginx reverse proxy
+- **Microservices Architecture**: Scalable and maintainable service decomposition
+- **User Authentication**: JWT-based authentication system
+- **User Management**: Complete CRUD operations for user profiles
+- **API Gateway**: Single entry point with routing and middleware
+- **MongoDB Integration**: Shared database across services
+- **Docker Support**: Complete containerization for all services
+- **Testing Environment**: Separate test configuration
+- **Health Checks**: Service health monitoring
+- **CORS Support**: Cross-origin resource sharing
+- **Protected Routes**: Authentication-based route protection
+
+## Future Enhancements
+
+1. **Service Discovery**: Implement service discovery (Consul, etcd)
+2. **Load Balancing**: Add load balancers for each service
+3. **Circuit Breakers**: Implement circuit breakers for service communication
+4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
+5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
+6. **Message Queues**: Add async communication (RabbitMQ, Kafka)
+7. **API Documentation**: Add Swagger/OpenAPI documentation
+8. **Testing**: Add comprehensive test suites for each service
+
+## Documentation
+
+- [Backend README](backend/README.md) - Detailed backend documentation
+- [Frontend README](frontend/README.md) - Frontend-specific instructions
