@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # MongoDB Database for Testing
   mongodb:
@@ -76,7 +74,7 @@ services:
   # API Gateway for Testing
   api-gateway:
     build:
-      context: ../backend/microservices/api-gateway
+      context: ../backend/api-gateway
       dockerfile: Dockerfile
     container_name: api-gateway-test
     restart: unless-stopped
