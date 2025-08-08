@@ -76,6 +76,18 @@ type UpdateUserRequest struct {
 }
 
 // GetUserProfile handles getting user profile
+// @Summary Get user profile
+// @Description Get user profile by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "User profile"
+// @Failure 400 {object} map[string]interface{} "Invalid user ID"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Router /api/users/profile/{id} [get]
 func (h *UserHandler) GetUserProfile(c *gin.Context) {
 	var req GetUserProfileRequest
 	if err := c.ShouldBindUri(&req); err != nil {
@@ -94,6 +106,18 @@ func (h *UserHandler) GetUserProfile(c *gin.Context) {
 }
 
 // ListUsers handles listing users
+// @Summary List users
+// @Description Get paginated list of users
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Number of users per page" default(10)
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "List of users"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/users/list [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	var req ListUsersRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -120,6 +144,19 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 }
 
 // UpdateUserProfile handles updating user profile
+// @Summary Update user profile
+// @Description Update user profile information
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body UpdateUserRequest true "User update data"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "User updated successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid data"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Router /api/users/profile/{id} [put]
 func (h *UserHandler) UpdateUserProfile(c *gin.Context) {
 	var req UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -189,4 +226,4 @@ func (h *UserHandler) forwardRequest(method, path string, body interface{}) ([]b
 	}
 
 	return responseBody, nil
-} 
+}

@@ -12,7 +12,11 @@ import (
 	"api-gateway/internal/handlers"
 	"api-gateway/internal/middleware"
 
+	_ "api-gateway/docs"
+
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // @title API Gateway
@@ -68,25 +72,8 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy", "service": "api-gateway"})
 	})
 
-	// API documentation endpoint
-	r.GET("/swagger", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "API Gateway Documentation",
-			"endpoints": gin.H{
-				"health": "/health",
-				"auth": gin.H{
-					"login":    "POST /api/auth/login",
-					"register": "POST /api/auth/register",
-					"validate": "POST /api/auth/validate",
-				},
-				"users": gin.H{
-					"profile": "GET /api/users/profile/:id",
-					"list":    "GET /api/users/list",
-					"update":  "PUT /api/users/profile/:id",
-				},
-			},
-		})
-	})
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API documentation index
 	r.GET("/docs", func(c *gin.Context) {

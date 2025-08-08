@@ -72,6 +72,16 @@ type ValidateRequest struct {
 }
 
 // Login handles user login
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} map[string]interface{} "Login successful"
+// @Failure 400 {object} map[string]interface{} "Invalid credentials"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -90,6 +100,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 // Register handles user registration
+// @Summary User registration
+// @Description Register a new user
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration data"
+// @Success 201 {object} map[string]interface{} "User registered successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid data"
+// @Failure 409 {object} map[string]interface{} "User already exists"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /api/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -108,6 +129,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 // ValidateToken handles token validation
+// @Summary Validate JWT token
+// @Description Validate JWT token and return user information
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body ValidateRequest true "Token to validate"
+// @Success 200 {object} map[string]interface{} "Token is valid"
+// @Failure 400 {object} map[string]interface{} "Invalid token"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /api/auth/validate [post]
 func (h *AuthHandler) ValidateToken(c *gin.Context) {
 	var req ValidateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
