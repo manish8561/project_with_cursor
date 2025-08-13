@@ -90,7 +90,7 @@ func main() {
 	})
 
 	// Swagger documentation
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs.json")))
 
 	// API documentation index
 	r.GET("/docs", func(c *gin.Context) {
