@@ -52,6 +52,7 @@ func EnableCORS(c *gin.Context) {
 
 	c.Next()
 }
+
 // @title API Gateway
 func main() {
 	// Load environment configuration
@@ -59,7 +60,7 @@ func main() {
 
 	// Initialize Gin router
 	r := gin.Default()
-	
+
 	// Load HTML templates
 	r.LoadHTMLGlob("templates/*")
 
@@ -79,15 +80,15 @@ func main() {
 	r.GET("/api-docs.json", func(c *gin.Context) {
 		c.File("./docs/swagger.json")
 	})
-	
+
 	// API Documentation HTML
 	r.GET("/api-docs", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "api-docs.html", gin.H{
-			"title": "API Gateway Documentation",
+			"title":   "API Gateway Documentation",
 			"baseURL": "http://localhost:8080",
 		})
 	})
-	
+
 	// Swagger documentation
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
