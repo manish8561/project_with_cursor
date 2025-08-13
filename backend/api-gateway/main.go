@@ -52,7 +52,7 @@ func EnableCORS(c *gin.Context) {
 
 	c.Next()
 }
-
+// @title API Gateway
 func main() {
 	// Load environment configuration
 	cfg := config.LoadConfig()
