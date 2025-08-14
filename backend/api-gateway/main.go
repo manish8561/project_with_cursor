@@ -89,7 +89,7 @@ func main() {
 		})
 	})
 
-	// Swagger documentation
+	// Swagger documentation endpoint
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api-docs.json")))
 
 	// API documentation index
@@ -140,8 +140,11 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
+		// Start the server
 		log.Printf("API Gateway starting on port %s", cfg.Port)
+		// Log API documentation URLs
 		log.Printf("API documentation available at: http://localhost:%s/swagger", cfg.Port)
+		// Log API documentation JSON
 		log.Printf("API documentation available at: http://localhost:%s/docs", cfg.Port)
 		if err := r.Run(serverAddr); err != nil {
 			log.Fatalf("Failed to start API Gateway: %v", err)
