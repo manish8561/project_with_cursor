@@ -1,7 +1,9 @@
+version: '3.8'
+
 services:
   # MongoDB Database
   mongodb:
-    image: mongo:latest
+    image: mongo:6.0
     container_name: mongodb
     restart: unless-stopped
     ports:
@@ -33,6 +35,11 @@ services:
       - mongodb
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # User Service
   user-service:
@@ -51,13 +58,18 @@ services:
       - mongodb
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # API Gateway
+  # API Gateway with Swagger
   api-gateway:
     build:
       context: ../backend/api-gateway
       dockerfile: Dockerfile
-    container_name: api-gateway
+    container_name: api-gateway-swagger
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -70,10 +82,15 @@ services:
       - user-service
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   mongodb_data:
 
 networks:
   microservices-network:
-    driver: bridge 
+    driver: bridge
