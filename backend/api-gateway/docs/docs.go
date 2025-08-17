@@ -452,7 +452,7 @@ var SwaggerInfo = &swag.Spec{
 	Schemes:          []string{},
 	Title:            "API Gateway",
 	Description:      "API Gateway for microservices architecture",
-	InfoInstanceName: "apigateway",
+	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
 	RightDelim:       "}}",
