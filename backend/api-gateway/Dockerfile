@@ -1,38 +1,24 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.19 AS builder
+
+COPY . /src
+WORKDIR /src
+
+RUN GOPROXY=https://goproxy.cn make build
+
+FROM debian:stable-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		ca-certificates  \
+        netbase \
+        && rm -rf /var/lib/apt/lists/ \
+        && apt-get autoremove -y && apt-get autoclean -y
+
+COPY --from=builder /src/bin /app
 
 WORKDIR /app
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
+EXPOSE 8000
+EXPOSE 9000
+VOLUME /data/conf
 
-# Download dependencies
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-# Final stage
-FROM alpine:3.18
-
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy the binary from builder stage
-COPY --from=builder /app/main .
-
-# Copy the templates directory
-COPY --from=builder /app/templates/ templates/
-
-# Copy the docs directory
-COPY docs/ docs/
-
-# Expose port
-EXPOSE 8080
-
-# Run the application
-CMD ["./main"]
+CMD ["./server", "-conf", "/data/conf"]
