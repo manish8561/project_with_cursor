@@ -41,7 +41,7 @@ services:
     networks:
       - microservices-test-network
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8081/health" ]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -66,12 +66,12 @@ services:
     networks:
       - microservices-test-network
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8082/health" ]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8082/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # API Gateway for Testing
+  # API Gateway for Testing (Kratos)
   api-gateway:
     build:
       context: ../backend/api-gateway
@@ -82,9 +82,6 @@ services:
       - "8080:8080"
     environment:
       - PORT=8080
-      - AUTH_SERVICE_URL=http://auth-service:8081
-      - USER_SERVICE_URL=http://user-service:8082
-      - GIN_MODE=release
     depends_on:
       auth-service:
         condition: service_healthy
@@ -93,7 +90,7 @@ services:
     networks:
       - microservices-test-network
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:8080/health" ]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
