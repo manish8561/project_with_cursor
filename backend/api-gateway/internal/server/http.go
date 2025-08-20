@@ -32,6 +32,20 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	srv := kratoshttp.NewServer(opts...)
 	v1.RegisterGreeterHTTPServer(srv, greeter)
 
+	// Serve Swagger UI static files and openapi.yaml
+	srv.HandleFunc("/swagger/", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		if r.URL.Path == "/swagger/" || r.URL.Path == "/swagger/index.html" {
+			nethttp.ServeFile(w, r, "swagger-ui/index.html")
+			return
+		}
+		if r.URL.Path == "/swagger/openapi.yaml" {
+			nethttp.ServeFile(w, r, "openapi.yaml")
+			return
+		}
+		w.WriteHeader(404)
+		w.Write([]byte("Not Found"))
+	})
+
 	// Health check endpoint
 	srv.HandleFunc("/health", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		w.WriteHeader(200)
