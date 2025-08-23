@@ -13,7 +13,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/ \
     && apt-get autoremove -y && apt-get autoclean -y
 
+
+# Copy built binaries
 COPY --from=builder /src/bin /app
+# Copy Swagger UI static files and OpenAPI spec
+COPY --from=builder /src/swagger-ui /app/swagger-ui
+COPY --from=builder /src/openapi.yaml /app/openapi.yaml
 
 WORKDIR /app
 
