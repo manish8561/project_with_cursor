@@ -33,13 +33,12 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	v1.RegisterGreeterHTTPServer(srv, greeter)
 
 	// Serve Swagger UI static files and openapi.yaml
+	srv.HandleFunc("/swagger/openapi.yaml", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		nethttp.ServeFile(w, r, "swagger-ui/openapi.yaml")
+	})
 	srv.HandleFunc("/swagger/", func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		if r.URL.Path == "/swagger/" || r.URL.Path == "/swagger/index.html" {
 			nethttp.ServeFile(w, r, "swagger-ui/index.html")
-			return
-		}
-		if r.URL.Path == "/swagger/openapi.yaml" {
-			nethttp.ServeFile(w, r, "openapi.yaml")
 			return
 		}
 		w.WriteHeader(404)
