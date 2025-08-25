@@ -28,6 +28,21 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/helloworld.v1.HelloReply'
 
+    /health:
+        get:
+            tags:
+                - Health
+            summary: Health check for API gateway
+            description: Returns the health status of the API gateway.
+            operationId: ApiGateway_Health
+            responses:
+                "200":
+                    description: API gateway is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+
     /auth/login:
         post:
             tags:
@@ -209,6 +224,12 @@ components:
                 message:
                     type: string
             description: The response message containing the greetings
+        HealthStatus:
+            type: object
+            properties:
+                status:
+                    type: string
+            description: Health status response
         # Auth Service Schemas
         LoginRequest:
             type: object
