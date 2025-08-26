@@ -27,6 +27,34 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/helloworld.v1.HelloReply'
+    /auth/health:
+        get:
+            tags:
+                - Health
+            summary: Health check for Auth service
+            description: Returns the health status of the Auth service.
+            operationId: AuthService_Health
+            responses:
+                "200":
+                    description: Auth service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+    /users/health:
+        get:
+            tags:
+                - Health
+            summary: Health check for User service
+            description: Returns the health status of the User service.
+            operationId: UserService_Health
+            responses:
+                "200":
+                    description: User service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
 
     /health:
         get:
