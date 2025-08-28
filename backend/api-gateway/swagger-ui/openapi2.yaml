@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 info:
-    title: Greeter API
-    description: The greeting service definition.
+    title: Backend With Cursor
+    description: The backend service with cursor and microservices for authentication and user management.
     version: 0.0.1
 paths:
     /auth/health:
@@ -346,4 +346,4 @@ components:
                 role:
                     type: string
 tags:
-    - name: Greeter
+    - name: Backend
