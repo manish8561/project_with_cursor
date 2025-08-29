@@ -1,0 +1,347 @@
+openapi: "3.1.0"
+info:
+    title: Backend With Cursor
+    description: The backend service with cursor and microservices for authentication and user management.
+    version: 0.0.1
+paths:
+    /auth/health:
+        get:
+            tags:
+                - Health
+            summary: Health check for Auth service
+            description: Returns the health status of the Auth service.
+            operationId: AuthService_Health
+            responses:
+                "200":
+                    description: Auth service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+    /users/health:
+        get:
+            tags:
+                - Health
+            summary: Health check for User service
+            description: Returns the health status of the User service.
+            operationId: UserService_Health
+            responses:
+                "200":
+                    description: User service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+
+    /health:
+        get:
+            tags:
+                - Health
+            summary: Health check for API gateway
+            description: Returns the health status of the API gateway.
+            operationId: ApiGateway_Health
+            responses:
+                "200":
+                    description: API gateway is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+
+    /auth/login:
+        post:
+            tags:
+                - Auth
+            summary: User login
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LoginRequest'
+            responses:
+                "200":
+                    description: Login successful
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/LoginResponse'
+                "401":
+                    description: Invalid credentials
+
+    /auth/register:
+        post:
+            tags:
+                - Auth
+            summary: User registration
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RegisterRequest'
+            responses:
+                "201":
+                    description: Registration successful
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RegisterResponse'
+                "400":
+                    description: Invalid input
+
+    /auth/validate-token:
+        post:
+            tags:
+                - Auth
+            summary: Validate JWT token
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TokenValidationRequest'
+            responses:
+                "200":
+                    description: Token validation result
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TokenValidationResponse'
+
+    /auth/refresh-token:
+        post:
+            tags:
+                - Auth
+            summary: Refresh JWT token
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RefreshTokenRequest'
+            responses:
+                "200":
+                    description: Token refreshed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RefreshTokenResponse'
+                "401":
+                    description: Invalid token
+
+    /users/{id}:
+        get:
+            tags:
+                - User
+            summary: Get user by ID
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: User found
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                "404":
+                    description: User not found
+        put:
+            tags:
+                - User
+            summary: Update user by ID
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateUserRequest'
+            responses:
+                "200":
+                    description: User updated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/User'
+                "404":
+                    description: User not found
+        delete:
+            tags:
+                - User
+            summary: Delete user by ID
+            parameters:
+                - name: id
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: User deleted
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                "404":
+                    description: User not found
+
+    /users:
+        get:
+            tags:
+                - User
+            summary: List users
+            parameters:
+                - name: page
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+                - name: size
+                  in: query
+                  required: false
+                  schema:
+                    type: integer
+            responses:
+                "200":
+                    description: List of users
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserListResponse'
+components:
+    schemas:
+        HealthStatus:
+            type: object
+            properties:
+                status:
+                    type: string
+            description: Health status response
+        # Auth Service Schemas
+        LoginRequest:
+            type: object
+            properties:
+                email:
+                    type: string
+                password:
+                    type: string
+            required:
+                - email
+                - password
+        LoginResponse:
+            type: object
+            properties:
+                status:
+                    type: string
+                token:
+                    type: string
+        RegisterRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                email:
+                    type: string
+                password:
+                    type: string
+                confirmPassword:
+                    type: string
+            required:
+                - name
+                - email
+                - password
+                - confirmPassword
+        RegisterResponse:
+            type: object
+            properties:
+                status:
+                    type: string
+                message:
+                    type: string
+        TokenValidationRequest:
+            type: object
+            properties:
+                token:
+                    type: string
+            required:
+                - token
+        TokenValidationResponse:
+            type: object
+            properties:
+                valid:
+                    type: boolean
+                user_id:
+                    type: string
+                message:
+                    type: string
+        RefreshTokenRequest:
+            type: object
+            properties:
+                token:
+                    type: string
+            required:
+                - token
+        RefreshTokenResponse:
+            type: object
+            properties:
+                status:
+                    type: string
+                token:
+                    type: string
+
+        # User Service Schemas
+        User:
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                email:
+                    type: string
+                password:
+                    type: string
+                status:
+                    type: string
+                role:
+                    type: string
+                createdAt:
+                    type: string
+                    format: date-time
+                updatedAt:
+                    type: string
+                    format: date-time
+        UserListResponse:
+            type: object
+            properties:
+                users:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/User'
+                total:
+                    type: integer
+                page:
+                    type: integer
+                size:
+                    type: integer
+        UpdateUserRequest:
+            type: object
+            properties:
+                name:
+                    type: string
+                email:
+                    type: string
+                role:
+                    type: string
