@@ -95,5 +95,27 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 		io.Copy(w, resp.Body)
 	})
 
+	// Proxy /users/* to user-service (for OpenAPI spec compatibility)
+	srv.HandleFunc("/users/", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		target := "http://user-service:8082" + r.URL.Path
+		req, err := nethttp.NewRequest(r.Method, target, r.Body)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		req.Header = r.Header
+		resp, err := nethttp.DefaultClient.Do(req)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
 	return srv
 }
