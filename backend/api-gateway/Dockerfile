@@ -21,7 +21,7 @@ COPY --from=builder /src/swagger-ui /app/swagger-ui
 
 WORKDIR /app
 
-EXPOSE 8000
+EXPOSE 8080
 EXPOSE 9000
 VOLUME /data/conf
 
