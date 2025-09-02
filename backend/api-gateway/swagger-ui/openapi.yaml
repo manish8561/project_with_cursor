@@ -1,15 +1,23 @@
 openapi: "3.1.0"
 info:
-    title: Backend With Cursor
-    description: The backend service with cursor and microservices for authentication and user management.
+    title: Backend With Cursor API Gateway
+    description: API Gateway for microservices-based backend with authentication and user management services.
     version: 0.0.1
+    contact:
+        name: Backend Team
+        email: backend@example.com
+servers:
+    - url: http://localhost:8080
+      description: Development server
+    - url: https://api.example.com
+      description: Production server
 paths:
-    /auth/health:
+    /api/auth/health:
         get:
             tags:
                 - Health
             summary: Health check for Auth service
-            description: Returns the health status of the Auth service.
+            description: Returns the health status of the Auth service via API Gateway.
             operationId: AuthService_Health
             responses:
                 "200":
@@ -18,12 +26,14 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/HealthStatus'
-    /users/health:
+                "502":
+                    description: Auth service is unavailable
+    /api/users/health:
         get:
             tags:
                 - Health
             summary: Health check for User service
-            description: Returns the health status of the User service.
+            description: Returns the health status of the User service via API Gateway.
             operationId: UserService_Health
             responses:
                 "200":
@@ -32,27 +42,31 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/HealthStatus'
+                "502":
+                    description: User service is unavailable
 
     /health:
         get:
             tags:
                 - Health
-            summary: Health check for API gateway
-            description: Returns the health status of the API gateway.
+            summary: Health check for API Gateway
+            description: Returns the health status of the API Gateway itself.
             operationId: ApiGateway_Health
             responses:
                 "200":
-                    description: API gateway is healthy
+                    description: API Gateway is healthy
                     content:
-                        application/json:
+                        text/plain:
                             schema:
-                                $ref: '#/components/schemas/HealthStatus'
+                                type: string
+                                example: "ok"
 
-    /auth/login:
+    /api/auth/login:
         post:
             tags:
                 - Auth
             summary: User login
+            description: Authenticate user with email and password
             requestBody:
                 required: true
                 content:
@@ -66,14 +80,19 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/LoginResponse'
+                "400":
+                    description: Invalid request format
                 "401":
                     description: Invalid credentials
+                "502":
+                    description: Auth service unavailable
 
-    /auth/register:
+    /api/auth/register:
         post:
             tags:
                 - Auth
             summary: User registration
+            description: Register a new user account
             requestBody:
                 required: true
                 content:
@@ -88,13 +107,16 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/RegisterResponse'
                 "400":
-                    description: Invalid input
+                    description: Invalid input or registration failed
+                "502":
+                    description: Auth service unavailable
 
-    /auth/validate-token:
+    /api/auth/validate:
         post:
             tags:
                 - Auth
             summary: Validate JWT token
+            description: Validate the provided JWT token and return user information
             requestBody:
                 required: true
                 content:
@@ -108,12 +130,19 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/TokenValidationResponse'
+                "400":
+                    description: Invalid request format
+                "500":
+                    description: Token validation error
+                "502":
+                    description: Auth service unavailable
 
-    /auth/refresh-token:
+    /api/auth/refresh:
         post:
             tags:
                 - Auth
             summary: Refresh JWT token
+            description: Refresh an existing JWT token to extend session
             requestBody:
                 required: true
                 content:
@@ -122,44 +151,54 @@ paths:
                             $ref: '#/components/schemas/RefreshTokenRequest'
             responses:
                 "200":
-                    description: Token refreshed
+                    description: Token refreshed successfully
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/RefreshTokenResponse'
                 "401":
-                    description: Invalid token
+                    description: Invalid or expired token
+                "502":
+                    description: Auth service unavailable
 
-    /users/{id}:
+    /api/users/profile/{id}:
         get:
             tags:
                 - User
             summary: Get user by ID
+            description: Retrieve user information by user ID
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
+                  description: User ID to retrieve
             responses:
                 "200":
-                    description: User found
+                    description: User found successfully
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/User'
+                "400":
+                    description: Invalid user ID format
                 "404":
                     description: User not found
+                "502":
+                    description: User service unavailable
         put:
             tags:
                 - User
             summary: Update user by ID
+            description: Update user information by user ID
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
+                  description: User ID to update
             requestBody:
                 required: true
                 content:
@@ -168,26 +207,32 @@ paths:
                             $ref: '#/components/schemas/UpdateUserRequest'
             responses:
                 "200":
-                    description: User updated
+                    description: User updated successfully
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/User'
+                "400":
+                    description: Invalid request data
                 "404":
                     description: User not found
+                "502":
+                    description: User service unavailable
         delete:
             tags:
                 - User
             summary: Delete user by ID
+            description: Delete a user account by user ID
             parameters:
                 - name: id
                   in: path
                   required: true
                   schema:
                     type: string
+                  description: User ID to delete
             responses:
                 "200":
-                    description: User deleted
+                    description: User deleted successfully
                     content:
                         application/json:
                             schema:
@@ -195,32 +240,47 @@ paths:
                                 properties:
                                     message:
                                         type: string
+                                        example: "User deleted successfully"
                 "404":
                     description: User not found
+                "502":
+                    description: User service unavailable
 
-    /users:
+    /api/users/list:
         get:
             tags:
                 - User
-            summary: List users
+            summary: List users with pagination
+            description: Get a paginated list of all users
             parameters:
                 - name: page
                   in: query
                   required: false
                   schema:
                     type: integer
+                    default: 1
+                    minimum: 1
+                  description: Page number for pagination
                 - name: size
                   in: query
                   required: false
                   schema:
                     type: integer
+                    default: 10
+                    minimum: 1
+                    maximum: 100
+                  description: Number of users per page
             responses:
                 "200":
-                    description: List of users
+                    description: List of users retrieved successfully
                     content:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/UserListResponse'
+                "500":
+                    description: Internal server error
+                "502":
+                    description: User service unavailable
 components:
     schemas:
         HealthStatus:
@@ -228,15 +288,25 @@ components:
             properties:
                 status:
                     type: string
-            description: Health status response
+                    example: "healthy"
+                service:
+                    type: string
+                    example: "auth-service"
+            description: Health status response from services
         # Auth Service Schemas
         LoginRequest:
             type: object
             properties:
                 email:
                     type: string
+                    format: email
+                    example: "user@example.com"
+                    description: User's email address
                 password:
                     type: string
+                    minLength: 6
+                    example: "password123"
+                    description: User's password
             required:
                 - email
                 - password
@@ -245,19 +315,34 @@ components:
             properties:
                 status:
                     type: string
+                    example: "success"
+                    description: Login status
                 token:
                     type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    description: JWT authentication token
         RegisterRequest:
             type: object
             properties:
                 name:
                     type: string
+                    example: "John Doe"
+                    description: User's full name
                 email:
                     type: string
+                    format: email
+                    example: "john.doe@example.com"
+                    description: User's email address
                 password:
                     type: string
+                    minLength: 6
+                    example: "password123"
+                    description: User's password
                 confirmPassword:
                     type: string
+                    minLength: 6
+                    example: "password123"
+                    description: Password confirmation (must match password)
             required:
                 - name
                 - email
@@ -268,13 +353,19 @@ components:
             properties:
                 status:
                     type: string
+                    example: "success"
+                    description: Registration status
                 message:
                     type: string
+                    example: "User registered successfully"
+                    description: Registration result message
         TokenValidationRequest:
             type: object
             properties:
                 token:
                     type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    description: JWT token to validate
             required:
                 - token
         TokenValidationResponse:
@@ -282,15 +373,23 @@ components:
             properties:
                 valid:
                     type: boolean
+                    example: true
+                    description: Whether the token is valid
                 user_id:
                     type: string
+                    example: "507f1f77bcf86cd799439011"
+                    description: User ID if token is valid
                 message:
                     type: string
+                    example: "Token is valid"
+                    description: Validation result message
         RefreshTokenRequest:
             type: object
             properties:
                 token:
                     type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    description: Current JWT token to refresh
             required:
                 - token
         RefreshTokenResponse:
@@ -298,8 +397,12 @@ components:
             properties:
                 status:
                     type: string
+                    example: "success"
+                    description: Refresh operation status
                 token:
                     type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    description: New JWT token
 
         # User Service Schemas
         User:
@@ -307,22 +410,38 @@ components:
             properties:
                 id:
                     type: string
+                    example: "507f1f77bcf86cd799439011"
+                    description: Unique user identifier
                 name:
                     type: string
+                    example: "John Doe"
+                    description: User's full name
                 email:
                     type: string
+                    format: email
+                    example: "john.doe@example.com"
+                    description: User's email address
                 password:
                     type: string
+                    description: User's hashed password (not returned in responses for security)
                 status:
                     type: string
+                    example: "active"
+                    description: User account status
                 role:
                     type: string
+                    example: "user"
+                    description: User role in the system
                 createdAt:
                     type: string
                     format: date-time
+                    example: "2024-01-15T10:30:00Z"
+                    description: Account creation timestamp
                 updatedAt:
                     type: string
                     format: date-time
+                    example: "2024-01-20T14:45:00Z"
+                    description: Last update timestamp
         UserListResponse:
             type: object
             properties:
@@ -330,18 +449,32 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/User'
+                    description: Array of user objects
                 total:
                     type: integer
+                    example: 150
+                    description: Total number of users
                 page:
                     type: integer
+                    example: 1
+                    description: Current page number
                 size:
                     type: integer
+                    example: 10
+                    description: Number of users per page
         UpdateUserRequest:
             type: object
             properties:
                 name:
                     type: string
+                    example: "Jane Smith"
+                    description: Updated user name
                 email:
                     type: string
+                    format: email
+                    example: "jane.smith@example.com"
+                    description: Updated email address
                 role:
                     type: string
+                    example: "admin"
+                    description: Updated user role
