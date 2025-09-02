@@ -51,6 +51,50 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 		w.Write([]byte("ok"))
 	})
 
+	// Auth service health check endpoint
+	srv.HandleFunc("/api/auth/health", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		target := "http://auth-service:8081/health"
+		req, err := nethttp.NewRequest(r.Method, target, r.Body)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		req.Header = r.Header
+		resp, err := nethttp.DefaultClient.Do(req)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
+	// User service health check endpoint
+	srv.HandleFunc("/api/users/health", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		target := "http://user-service:8082/health"
+		req, err := nethttp.NewRequest(r.Method, target, r.Body)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		req.Header = r.Header
+		resp, err := nethttp.DefaultClient.Do(req)
+		if err != nil {
+			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
 	// Proxy /api/auth/* to auth-service
 	srv.HandlePrefix("/api/auth/", nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		target := "http://auth-service:8081" + r.URL.Path
