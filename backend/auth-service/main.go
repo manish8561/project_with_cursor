@@ -9,27 +9,41 @@ import (
 
 	"auth-service/internal/config"
 	"auth-service/internal/handlers"
+	"auth-service/internal/logger"
 	"auth-service/internal/services"
+	"go.uber.org/zap"
 )
 
 func main() {
+	// Initialize logger
+	if err := logger.InitLogger(); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Sync()
+
+	zapLogger := logger.GetLogger()
+
 	// Load environment configuration
 	cfg := config.LoadConfig()
+	zapLogger.Info("Configuration loaded successfully")
 
 	// Initialize MongoDB
 	mongoConfig, err := config.NewMongoDBConfig(cfg.MongoURI, cfg.MongoDB)
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		zapLogger.Fatal("Failed to connect to MongoDB", zap.Error(err))
 	}
 	defer mongoConfig.Close()
+	zapLogger.Info("MongoDB connection established")
 
 	// Initialize JWT service
 	jwtConfig := config.NewJWTConfig(cfg.JWTSecret)
 	jwtService := services.NewJWTService(jwtConfig)
+	zapLogger.Info("JWT service initialized")
 
 	// Initialize services
 	authService := services.NewAuthService(mongoConfig, jwtService)
 	authHandler := handlers.NewAuthHandler(authService)
+	zapLogger.Info("Auth service and handlers initialized")
 
 	// Setup routes using the router
 	r := SetupRoutes(authHandler)
@@ -42,12 +56,12 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		log.Printf("Auth service starting on port %s", cfg.Port)
+		zapLogger.Info("Auth service starting", zap.String("port", cfg.Port))
 		if err := r.Run(serverAddr); err != nil {
-			log.Fatalf("Failed to start auth service: %v", err)
+			zapLogger.Fatal("Failed to start auth service", zap.Error(err))
 		}
 	}()
 
 	<-quit
-	log.Println("Shutting down auth service...")
+	zapLogger.Info("Shutting down auth service...")
 }
