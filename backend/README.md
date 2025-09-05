@@ -48,6 +48,7 @@ backend/
 │   └── internal/
 │       ├── config/
 │       ├── handlers/
+│       ├── logger/          # Zap structured logging
 │       ├── models/
 │       └── services/
 ├── user-service/
@@ -57,15 +58,19 @@ backend/
 │   └── internal/
 │       ├── config/
 │       ├── handlers/
+│       ├── logger/          # Zap structured logging
 │       ├── models/
 │       └── services/
 ├── api-gateway/
-│   ├── main.go
+│   ├── cmd/
+│   │   └── api-gateway/
+│   │       └── main.go
 │   ├── go.mod
 │   ├── Dockerfile
 │   └── internal/
 │       ├── config/
 │       ├── handlers/
+│       ├── logger/          # Zap structured logging
 │       └── middleware/
 └── README.md
 ```
@@ -131,16 +136,19 @@ backend/
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB=auth_db
    JWT_SECRET=your-secret-key
+   LOG_LEVEL=info
 
    # User Service
    PORT=8082
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB=auth_db
+   LOG_LEVEL=info
 
    # API Gateway
    PORT=8080
    AUTH_SERVICE_URL=http://localhost:8081
    USER_SERVICE_URL=http://localhost:8082
+   LOG_LEVEL=info
    ```
 
 ## API Endpoints
@@ -220,6 +228,54 @@ docker run -p 8082:8082 user-service
 docker run -p 8080:8080 api-gateway
 ```
 
+## Logging
+
+All services implement structured logging using **Zap** for high-performance, structured JSON logging.
+
+### Features
+- **Structured JSON Output**: All logs are in JSON format for easy parsing
+- **Environment-based Log Levels**: Configure via `LOG_LEVEL` environment variable
+- **Service Identification**: Each log entry includes the service name
+- **Performance Optimized**: Uses Uber's Zap logger for minimal overhead
+
+### Log Levels
+Set the `LOG_LEVEL` environment variable to control logging verbosity:
+- `debug`: Most verbose, includes debug information
+- `info`: General information (default)
+- `warn`: Warning messages
+- `error`: Error messages only
+
+### Example Log Output
+```json
+{
+  "level": "info",
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "caller": "main.go:25",
+  "message": "Server starting",
+  "service": "auth-service",
+  "port": 8081
+}
+```
+
+### Usage in Code
+```go
+import "your-service/internal/logger"
+
+// Initialize logger (done in main.go)
+logger.InitLogger()
+
+// Use logger
+logger.GetLogger().Info("User authenticated", 
+    zap.String("user_id", userID),
+    zap.String("email", email),
+)
+
+logger.GetLogger().Error("Database connection failed",
+    zap.Error(err),
+    zap.String("database", "mongodb"),
+)
+```
+
 ## Benefits of This Architecture
 
 1. **Scalability**: Each service can be scaled independently
@@ -227,6 +283,7 @@ docker run -p 8080:8080 api-gateway
 3. **Technology Flexibility**: Each service can use different technologies
 4. **Fault Isolation**: Failure in one service doesn't affect others
 5. **Team Organization**: Different teams can work on different services
+6. **Observability**: Structured logging across all services for better monitoring
 
 ## Future Enhancements
 
@@ -284,16 +341,19 @@ PORT=8081
 MONGO_URI=mongodb://admin:password@mongodb:27017
 MONGO_DB=auth_db
 JWT_SECRET=your-super-secret-jwt-key
+LOG_LEVEL=info
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password@mongodb:27017
 MONGO_DB=auth_db
+LOG_LEVEL=info
 
 # API Gateway
 PORT=8080
 AUTH_SERVICE_URL=http://auth-service:8081
 USER_SERVICE_URL=http://user-service:8082
+LOG_LEVEL=info
 ```
 
 ### Test Environment
@@ -308,14 +368,17 @@ PORT=8081
 MONGO_URI=mongodb://admin:password123@mongodb:27017
 MONGO_DB=testdb
 JWT_SECRET=test-jwt-secret-key-for-testing
+LOG_LEVEL=debug
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password123@mongodb:27017
 MONGO_DB=testdb
+LOG_LEVEL=debug
 
 # API Gateway
 PORT=8080
 AUTH_SERVICE_URL=http://auth-service:8081
 USER_SERVICE_URL=http://user-service:8082
+LOG_LEVEL=debug
 ``` 
