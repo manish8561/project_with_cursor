@@ -12,7 +12,6 @@ var Logger *zap.Logger
 // InitLogger initializes the global logger
 func InitLogger() error {
 	config := zap.NewProductionConfig()
-	
 	// Set log level based on environment
 	logLevel := os.Getenv("LOG_LEVEL")
 	switch logLevel {

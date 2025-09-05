@@ -1,8 +1,9 @@
 package main
 
 import (
-	"net/http"
 	"auth-service/internal/handlers"
+	"auth-service/internal/middleware"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,6 +28,9 @@ func SetupRoutes(authHandler *handlers.AuthHandler) *gin.Engine {
 
 	// Enable CORS
 	r.Use(EnableCORS)
+	
+	// User middleware
+	r.Use(middleware.ZapMiddleware())
 
 	// API routes
 	api := r.Group("/api/auth")
