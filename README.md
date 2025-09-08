@@ -39,6 +39,7 @@ A full-stack application with Angular frontend and Go microservices backend.
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
+   - Kafka: localhost:9092
 
 ### Testing Environment
 
@@ -53,6 +54,7 @@ A full-stack application with Angular frontend and Go microservices backend.
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
+   - Kafka: localhost:9092
 
 ## API Documentation
 
@@ -126,6 +128,98 @@ The API documentation is organized by service:
 - **MongoDB**: Shared database across all services
 - **Collections**: `users` (shared between auth and user services)
 
+### Message Queue
+- **Apache Kafka**: Event-driven communication between services
+- **Topics**: `user.created.v1`, `user.updated.v1`, `user.deleted.v1`
+- **Producers**: Auth Service (user lifecycle events)
+- **Consumers**: User Service (event processing)
+
+## Logging (Zap)
+
+All backend services use **Uber's Zap** for high-performance structured logging.
+
+### Features
+- **Structured JSON Output**: All logs in JSON format for easy parsing
+- **Environment-based Log Levels**: Configure via `LOG_LEVEL` environment variable
+- **Service Identification**: Each log entry includes service name
+- **Performance Optimized**: Minimal overhead logging
+
+### Log Levels
+Set the `LOG_LEVEL` environment variable:
+- `debug`: Most verbose, includes debug information
+- `info`: General information (default)
+- `warn`: Warning messages
+- `error`: Error messages only
+
+### Example Log Output
+```json
+{
+  "level": "info",
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "caller": "main.go:25",
+  "message": "Server starting",
+  "service": "auth-service",
+  "port": "8081"
+}
+```
+
+### Usage in Code
+```go
+import "your-service/internal/logger"
+
+// Initialize logger (done in main.go)
+logger.InitLogger()
+
+// Use logger
+logger.GetLogger().Info("User authenticated", 
+    zap.String("user_id", userID),
+    zap.String("email", email),
+)
+
+logger.GetLogger().Error("Database connection failed",
+    zap.Error(err),
+    zap.String("database", "mongodb"),
+)
+```
+
+## Kafka Integration
+
+### Architecture
+- **Event-Driven Communication**: Services communicate asynchronously via Kafka topics
+- **Producer**: Auth Service publishes user lifecycle events
+- **Consumer**: User Service processes events for data consistency
+- **Topics**: Versioned event schemas for backward compatibility
+
+### Event Flow
+1. **User Registration**: Auth Service creates user → publishes `user.created.v1`
+2. **User Update**: User Service updates profile → publishes `user.updated.v1`
+3. **User Deletion**: User Service deletes user → publishes `user.deleted.v1`
+
+### Configuration
+```bash
+# Kafka Configuration
+KAFKA_BROKERS=kafka:9092
+KAFKA_CLIENT_ID=auth-service
+KAFKA_TOPIC_USER_CREATED=user.created.v1
+KAFKA_TOPIC_USER_UPDATED=user.updated.v1
+KAFKA_TOPIC_USER_DELETED=user.deleted.v1
+```
+
+### Event Schema Example
+```json
+{
+  "event_id": "evt_123456789",
+  "event_type": "user.created.v1",
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "user_id": "user_123",
+  "email": "user@example.com",
+  "metadata": {
+    "source": "auth-service",
+    "trace_id": "trace_abc123"
+  }
+}
+```
+
 ## Development Setup
 
 ### Backend Development
@@ -165,6 +259,11 @@ The API documentation is organized by service:
    PORT=8080
    AUTH_SERVICE_URL=http://localhost:8081
    USER_SERVICE_URL=http://localhost:8082
+
+   # Kafka (for local development)
+   KAFKA_BROKERS=localhost:9092
+   KAFKA_CLIENT_ID=auth-service
+   KAFKA_TOPIC_USER_CREATED=user.created.v1
    ```
 
 ### Frontend Development
@@ -308,6 +407,11 @@ MONGO_DB=auth_db
 PORT=8080
 AUTH_SERVICE_URL=http://auth-service:8081
 USER_SERVICE_URL=http://user-service:8082
+
+# Kafka
+KAFKA_BROKERS=kafka:9092
+KAFKA_CLIENT_ID=auth-service
+KAFKA_TOPIC_USER_CREATED=user.created.v1
 ```
 
 ### Test Environment
@@ -332,6 +436,11 @@ MONGO_DB=testdb
 PORT=8080
 AUTH_SERVICE_URL=http://auth-service:8081
 USER_SERVICE_URL=http://user-service:8082
+
+# Kafka
+KAFKA_BROKERS=kafka:9092
+KAFKA_CLIENT_ID=auth-service
+KAFKA_TOPIC_USER_CREATED=user.created.v1
 ```
 
 ## Features
@@ -341,6 +450,8 @@ USER_SERVICE_URL=http://user-service:8082
 - **User Management**: Complete CRUD operations for user profiles
 - **API Gateway**: Single entry point with routing and middleware
 - **MongoDB Integration**: Shared database across services
+- **Event-Driven Communication**: Kafka-based async messaging between services
+- **Structured Logging**: Zap-based JSON logging across all services
 - **Docker Support**: Complete containerization for all services
 - **Testing Environment**: Separate test configuration
 - **Health Checks**: Service health monitoring
@@ -355,9 +466,10 @@ USER_SERVICE_URL=http://user-service:8082
 3. **Circuit Breakers**: Implement circuit breakers for service communication
 4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
 5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
-6. **Message Queues**: Add async communication (RabbitMQ, Kafka)
-7. **API Documentation**: ✅ **COMPLETED** - Swagger/OpenAPI documentation
-8. **Testing**: Add comprehensive test suites for each service
+6. **Message Queues**: ✅ **COMPLETED** - Kafka integration for async communication
+7. **Structured Logging**: ✅ **COMPLETED** - Zap-based JSON logging
+8. **API Documentation**: ✅ **COMPLETED** - Swagger/OpenAPI documentation
+9. **Testing**: Add comprehensive test suites for each service
 
 ## Documentation
 
