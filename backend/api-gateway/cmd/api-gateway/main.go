@@ -51,13 +51,13 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 
 func main() {
 	flag.Parse()
-	
+
 	// Initialize zap logger
 	if err := logger.InitLogger(); err != nil {
 		panic(err)
 	}
 	defer logger.Sync()
-	
+
 	// Create Kratos logger with zap backend
 	kratosLogger := log.With(log.NewStdLogger(os.Stdout),
 		"ts", log.DefaultTimestamp,
@@ -68,7 +68,7 @@ func main() {
 		"trace.id", tracing.TraceID(),
 		"span.id", tracing.SpanID(),
 	)
-	
+
 	// Log initialization with zap
 	logger.GetLogger().Info("API Gateway starting",
 		zap.String("service.id", id),
