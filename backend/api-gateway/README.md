@@ -228,3 +228,56 @@ wire
 make all
 ```
 
+## gRPC
+
+The API Gateway also exposes a gRPC server using Kratos.
+
+- **Port**: 9000 (see `configs/config.yaml` → `server.grpc.addr`)
+- **Service**: `helloworld.v1.Greeter`
+- **Proto definitions**: `api/helloworld/v1/greeter.proto`
+
+### Run
+
+```bash
+# Run locally (HTTP :8080, gRPC :9000)
+go run cmd/api-gateway/main.go
+
+# Or with Docker Compose (ports exposed: 8080, 9000)
+docker compose -f ../../deploy/docker-compose.yml up --build
+```
+
+### grpcurl examples
+
+You can test the gRPC server with `grpcurl`.
+
+```bash
+# Install grpcurl if needed
+# macOS: brew install grpcurl
+# Linux: go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+
+# List services
+grpcurl -plaintext localhost:9000 list
+
+# List methods of Greeter
+grpcurl -plaintext localhost:9000 list helloworld.v1.Greeter
+
+# Call SayHello
+grpcurl -plaintext -d '{"name":"Kratos"}' localhost:9000 helloworld.v1.Greeter/SayHello
+```
+
+### gRPC server code pointers
+
+- Server setup: `internal/server/grpc.go` (registers `Greeter` on the gRPC server)
+- HTTP gateway: `internal/server/http.go` (registers HTTP handlers, proxy routes, and `/health`)
+- Configuration: `configs/config.yaml`
+
+### Health and readiness
+
+- HTTP health: `GET /health` returns `200 ok` from the gateway
+- Auth service health (proxied): `GET /api/auth/health` → `auth-service:8081/health`
+- User service health (proxied): `GET /api/users/health` → `user-service:8082/health`
+
+Note: The gRPC server uses Kratos middleware for recovery. If you expose it externally, consider adding TLS and auth middleware.
+
+### Author
+Manish Sharma
