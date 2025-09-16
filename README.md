@@ -27,19 +27,21 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 ### Using Docker Compose (Recommended)
 
-1. **Start all services**:
+1. **Start all services (backend + frontend)**:
    ```bash
-   cd deploy
-   docker compose up --build
+   docker compose -f deploy/docker-compose.yml up -d --build
    ```
 
 2. **Access the services**:
-   - Frontend: http://localhost:4200
+   - Frontend (Angular + Nginx): http://localhost:8085
    - API Gateway: http://localhost:8080
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
-   - Kafka: localhost:9092
+
+Notes:
+- The frontend proxies API calls to the gateway via `/api` (configured in `frontend/nginx.conf`).
+- Angular environments use `apiUrl: '/api'` for containerized runs.
 
 ### Testing Environment
 
@@ -54,7 +56,6 @@ A full-stack application with Angular frontend and Go microservices backend.
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
-   - Kafka: localhost:9092
 
 ## API Documentation
 
@@ -119,7 +120,7 @@ The API documentation is organized by service:
    - CORS handling
    - **Centralized API Documentation**
 
-4. **Frontend** (Port 4200)
+4. **Frontend** (Port 8085 in Docker)
    - Angular application
    - User interface for all operations
    - Authentication and protected routes
@@ -129,10 +130,7 @@ The API documentation is organized by service:
 - **Collections**: `users` (shared between auth and user services)
 
 ### Message Queue
-- **Apache Kafka**: Event-driven communication between services
-- **Topics**: `user.created.v1`, `user.updated.v1`, `user.deleted.v1`
-- **Producers**: Auth Service (user lifecycle events)
-- **Consumers**: User Service (event processing)
+Pluggable (not enabled by default in Docker Compose).
 
 ## Logging (Zap)
 
@@ -309,20 +307,20 @@ curl -X GET http://localhost:8080/api/users/list \
 
 ### Production
 ```bash
-# Start all services
-cd deploy
-docker compose up --build
+# Start all services (detached)
+docker compose -f deploy/docker-compose.yml up -d --build
 
 # Stop services
-docker compose down
+docker compose -f deploy/docker-compose.yml down
 
 # View logs
-docker compose logs
+docker compose -f deploy/docker-compose.yml logs
 
 # View specific service logs
-docker compose logs auth-service
-docker compose logs user-service
-docker compose logs api-gateway
+docker compose -f deploy/docker-compose.yml logs auth-service
+docker compose -f deploy/docker-compose.yml logs user-service
+docker compose -f deploy/docker-compose.yml logs api-gateway
+docker compose -f deploy/docker-compose.yml logs frontend
 ```
 
 ### Testing
@@ -364,10 +362,17 @@ curl http://localhost:8082/health  # User Service
 
 ### Common Issues
 
-1. **Port conflicts**: Ensure ports 8080, 8081, 8082, 4200, and 27017 are available
+1. **Port conflicts**: Ensure ports 8080, 8081, 8082, 8085, and 27017 are available
 2. **MongoDB connection**: Check if MongoDB is running and accessible
 3. **Service communication**: Verify service URLs in API Gateway configuration
 4. **Authentication errors**: Check JWT secret configuration
+
+5. **Image pull/DNS errors**: If you see errors like `server misbehaving` when pulling base images, try:
+   ```bash
+   sudo systemctl restart systemd-resolved
+   docker system prune -f
+   docker compose -f deploy/docker-compose.yml build --pull
+   ```
 
 ### Logs and Debugging
 ```bash

@@ -91,6 +91,20 @@ services:
     volumes:
       - ../backend/api-gateway/configs/config.yaml:/data/conf/config.yaml:ro
 
+  # Frontend (Angular + Nginx)
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "8085:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - microservices-network
+
 volumes:
   mongodb_data:
 

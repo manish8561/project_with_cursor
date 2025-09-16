@@ -5,14 +5,9 @@ WORKDIR /src
 
 RUN GOPROXY=https://goproxy.cn make build
 
-FROM debian:stable-slim
+FROM alpine:3.19
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates  \
-    netbase \
-    curl \
-    && rm -rf /var/lib/apt/lists/ \
-    && apt-get autoremove -y && apt-get autoclean -y
+RUN apk --no-cache add ca-certificates curl
 
 
 # Copy built binaries
