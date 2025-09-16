@@ -182,6 +182,23 @@ curl -X GET http://localhost:8080/api/users/list \
   -H "Authorization: Bearer your-jwt-token"
 ```
 
+## Rate Limiting (API Gateway)
+
+The API Gateway enforces a simple per-IP token bucket rate limit on proxied routes (e.g., `/api/auth/*`, `/api/users/*`). Defaults can be tuned via environment variables:
+
+- `RATE_LIMIT_RPS`: Requests per second refill rate (float, default: 10)
+- `RATE_LIMIT_BURST`: Burst capacity in requests (int, default: 20)
+
+When the limit is exceeded, requests receive HTTP 429 Too Many Requests with body `rate limit exceeded`.
+
+### Examples
+
+```bash
+# Allow a higher throughput during load testing
+RATE_LIMIT_RPS=50 RATE_LIMIT_BURST=100 \
+  docker compose -f deploy/docker-compose.yml up -d --build
+```
+
 ## Docker Commands
 
 ### Production
