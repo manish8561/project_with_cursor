@@ -1,0 +1,12 @@
+server:
+  http:
+    addr: 0.0.0.0:8080
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:9000
+    timeout: 1s
+data:
+  auth_service:
+    addr: "http://localhost:8081"
+  user_service:
+    addr: "http://localhost:8082"
