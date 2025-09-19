@@ -5,7 +5,7 @@ WORKDIR /src
 
 RUN GOPROXY=https://goproxy.cn make build
 
-FROM alpine:3.19
+FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates curl
 
