@@ -35,9 +35,13 @@ export class AuthService {
     constructor(private http: HttpClient) { }
 
     login(credentials: LoginRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/user/login`, credentials).pipe(
+        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
             map(response => {
-                if (response.status === 'success') {
+                if (response.token) {
+                    if (this.isBrowser()) {
+                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('user', JSON.stringify(response.user));
+                    }
                     return response;
                 }
                 throw new Error('Login failed');
@@ -46,9 +50,13 @@ export class AuthService {
     }
 
     register(userData: RegisterRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/user/register`, userData).pipe(
+        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, userData).pipe(
             map(response => {
-                if (response.status === 'success') {
+                if (response.token) {
+                    if (this.isBrowser()) {
+                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('user', JSON.stringify(response.user));
+                    }
                     return response;
                 }
                 throw new Error('Registration failed');
@@ -59,6 +67,7 @@ export class AuthService {
     logout(): void {
         if (this.isBrowser()) {
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
         }
     }
 
@@ -72,11 +81,12 @@ export class AuthService {
 
     getUser(): any {
         if (!this.isBrowser()) return null;
-        return null;
+        const user = localStorage.getItem('user');
+        return user ? JSON.parse(user) : null;
     }
 
     getProfile(): Observable<any> {
-        return this.http.get<any>(`${this.apiUrl}/user/profile`);
+        return this.http.get<any>(`${this.apiUrl}/users/profile`);
     }
 
     isBrowser(): boolean {
