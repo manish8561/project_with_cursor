@@ -85,8 +85,17 @@ export class AuthService {
         return user ? JSON.parse(user) : null;
     }
 
-    getProfile(): Observable<any> {
-        return this.http.get<any>(`${this.apiUrl}/users/profile`);
+    getProfile(userId: string): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/api/users/profile/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${this.getToken()}`
+            }
+        }).pipe(
+            catchError(error => {
+                console.error('Error fetching profile:', error);
+                throw error;
+            })
+        );
     }
 
     isBrowser(): boolean {
