@@ -1,14 +1,19 @@
 package handlers
 
 import (
+	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
+
 	"user-service/internal/logger"
 	"user-service/internal/models"
 	"user-service/internal/services"
-	"net/http"
-	"strconv"
-
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 // UserHandler handles HTTP requests for user operations
@@ -23,28 +28,71 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 	}
 }
 
-// GetUserByID handles requests to get a user by ID
+// GetUserByID handles requests to get the current user's profile using JWT token
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	zapLogger := logger.GetLogger()
-	
-	id := c.Param("id")
-	if id == "" {
-		zapLogger.Error("Missing user ID in request", 
+
+	// Get token from Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		zapLogger.Error("Missing Authorization header",
 			zap.String("client_ip", c.ClientIP()),
 		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization token is required"})
 		return
 	}
 
-	zapLogger.Info("Getting user by ID", 
-		zap.String("user_id", id),
+	// Extract the token from "Bearer <token>"
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenString == authHeader { // No Bearer prefix found
+		zapLogger.Error("Invalid Authorization header format")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
+		return
+	}
+
+	// Parse the token to get user ID
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		// Replace with your actual secret key
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil {
+		zapLogger.Error("Invalid token", 
+			zap.Error(err),
+			zap.String("client_ip", c.ClientIP()),
+		)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		zapLogger.Error("Invalid token claims")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+		return
+	}
+
+	// Get user ID from token claims
+	userID, ok := claims["user_id"].(string)
+	if !ok || userID == "" {
+		zapLogger.Error("User ID not found in token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID in token"})
+		return
+	}
+
+	zapLogger.Info("Getting user by ID from token", 
+		zap.String("user_id", userID),
 		zap.String("client_ip", c.ClientIP()),
 	)
 
-	user, err := h.userService.GetUserByID(id)
+	user, err := h.userService.GetUserByID(userID)
 	if err != nil {
 		zapLogger.Warn("User not found", 
-			zap.String("user_id", id),
+			zap.String("user_id", userID),
 			zap.Error(err),
 			zap.String("client_ip", c.ClientIP()),
 		)
@@ -53,7 +101,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	}
 
 	zapLogger.Info("User retrieved successfully", 
-		zap.String("user_id", id),
+		zap.String("user_id", userID),
 		zap.String("client_ip", c.ClientIP()),
 	)
 	c.JSON(http.StatusOK, user)
