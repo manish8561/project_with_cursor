@@ -7,11 +7,24 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Logger *zap.Logger
+// Logger defines the interface for logging operations.
+// This allows for mock implementations in tests.
+type Logger interface {
+	Info(msg string, fields ...zap.Field)
+	Warn(msg string, fields ...zap.Field)
+	Error(msg string, fields ...zap.Field)
+	Sync() error
+}
 
-// InitLogger initializes the global logger
-func InitLogger() error {
+// zapLogger is an implementation of the Logger interface that uses zap.
+type zapLogger struct {
+	logger *zap.Logger
+}
+
+// NewZapLogger creates and initializes a new zap-based logger.
+func NewZapLogger() (Logger, error) {
 	config := zap.NewProductionConfig()
+
 	// Set log level based on environment
 	logLevel := os.Getenv("LOG_LEVEL")
 	switch logLevel {
@@ -44,27 +57,34 @@ func InitLogger() error {
 	}
 
 	// Add service name field
-	config.InitialFields = map[string]any{
+	config.InitialFields = map[string]interface{}{
 		"service": "user-service",
 	}
 
-	var err error
-	Logger, err = config.Build()
+	logger, err := config.Build()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &zapLogger{logger: logger}, nil
 }
 
-// GetLogger returns the global logger instance
-func GetLogger() *zap.Logger {
-	return Logger
+// Info logs an info-level message.
+func (l *zapLogger) Info(msg string, fields ...zap.Field) {
+	l.logger.Info(msg, fields...)
 }
 
-// Sync flushes any buffered log entries
-func Sync() {
-	if Logger != nil {
-		Logger.Sync()
-	}
+// Warn logs a warning-level message.
+func (l *zapLogger) Warn(msg string, fields ...zap.Field) {
+	l.logger.Warn(msg, fields...)
+}
+
+// Error logs an error-level message.
+func (l *zapLogger) Error(msg string, fields ...zap.Field) {
+	l.logger.Error(msg, fields...)
+}
+
+// Sync flushes any buffered log entries.
+func (l *zapLogger) Sync() error {
+	return l.logger.Sync()
 }

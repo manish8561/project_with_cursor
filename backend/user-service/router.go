@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"user-service/internal/handlers"
+	"user-service/internal/logger"
 	"user-service/internal/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -23,14 +24,14 @@ func EnableCORS(c *gin.Context) {
 }
 
 // SetupRoutes configures all routes for the user service
-func SetupRoutes(userHandler *handlers.UserHandler) *gin.Engine {
+func SetupRoutes(userHandler *handlers.UserHandler, log logger.Logger) *gin.Engine {
 	r := gin.Default()
 
 	// Enable CORS
 	r.Use(EnableCORS)
 
 	// User middleware
-	r.Use(middleware.ZapMiddleware())
+	r.Use(middleware.ZapMiddleware(log))
 
 	// API routes
 	api := r.Group("/api/users")

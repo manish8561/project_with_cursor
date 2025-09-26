@@ -9,12 +9,10 @@ import (
 )
 
 // LoggingMiddleware creates a Gin middleware for request logging using Zap
-func LoggingMiddleware() gin.HandlerFunc {
+func LoggingMiddleware(log logger.Logger) gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		zapLogger := logger.GetLogger()
-		
 		// Log the request details
-		zapLogger.Info("HTTP Request",
+		log.Info("HTTP Request",
 			zap.String("method", param.Method),
 			zap.String("path", param.Path),
 			zap.Int("status", param.StatusCode),
@@ -23,36 +21,34 @@ func LoggingMiddleware() gin.HandlerFunc {
 			zap.String("user_agent", param.Request.UserAgent()),
 			zap.Int("body_size", param.BodySize),
 		)
-		
+
 		// Return empty string since we're using Zap for logging
 		return ""
 	})
 }
 
 // ZapMiddleware creates a more comprehensive Zap logging middleware
-func ZapMiddleware() gin.HandlerFunc {
+func ZapMiddleware(log logger.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
-		
-		zapLogger := logger.GetLogger()
-		
+
 		// Log incoming request
-		zapLogger.Info("Incoming request",
+		log.Info("Incoming request",
 			zap.String("method", c.Request.Method),
 			zap.String("path", path),
 			zap.String("query", raw),
 			zap.String("client_ip", c.ClientIP()),
 			zap.String("user_agent", c.Request.UserAgent()),
 		)
-		
+
 		// Process request
 		c.Next()
-		
+
 		// Log response
 		latency := time.Since(start)
-		zapLogger.Info("Request completed",
+		log.Info("Request completed",
 			zap.String("method", c.Request.Method),
 			zap.String("path", path),
 			zap.Int("status", c.Writer.Status()),
@@ -60,11 +56,11 @@ func ZapMiddleware() gin.HandlerFunc {
 			zap.String("client_ip", c.ClientIP()),
 			zap.Int("response_size", c.Writer.Size()),
 		)
-		
+
 		// Log errors if any
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
-				zapLogger.Error("Request error",
+				log.Error("Request error",
 					zap.String("method", c.Request.Method),
 					zap.String("path", path),
 					zap.Error(err),
