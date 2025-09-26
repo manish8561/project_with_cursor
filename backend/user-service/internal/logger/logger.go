@@ -44,7 +44,7 @@ func InitLogger() error {
 	}
 
 	// Add service name field
-	config.InitialFields = map[string]interface{}{
+	config.InitialFields = map[string]any{
 		"service": "user-service",
 	}
 
