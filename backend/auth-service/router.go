@@ -2,6 +2,7 @@ package main
 
 import (
 	"auth-service/internal/handlers"
+	"auth-service/internal/logger"
 	"auth-service/internal/middleware"
 	"net/http"
 
@@ -23,14 +24,14 @@ func EnableCORS(c *gin.Context) {
 }
 
 // SetupRoutes configures all routes for the auth service
-func SetupRoutes(authHandler *handlers.AuthHandler) *gin.Engine {
+func SetupRoutes(authHandler *handlers.AuthHandler, log logger.Logger) *gin.Engine {
 	r := gin.Default()
 
 	// Enable CORS
 	r.Use(EnableCORS)
 	
 	// User middleware
-	r.Use(middleware.ZapMiddleware())
+	r.Use(middleware.ZapMiddleware(log))
 
 	// API routes
 	api := r.Group("/api/auth")
