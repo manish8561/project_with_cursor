@@ -13,7 +13,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o user-service ./cmd/user-service
 
 # Final stage
 FROM alpine:latest
@@ -23,10 +23,10 @@ RUN apk --no-cache add ca-certificates curl
 WORKDIR /root/
 
 # Copy the binary from builder stage
-COPY --from=builder /app/main .
+COPY --from=builder /app/user-service .
 
 # Expose port
 EXPOSE 8082
 
 # Run the application
-CMD ["./main"] 
+CMD ["./user-service"] 
