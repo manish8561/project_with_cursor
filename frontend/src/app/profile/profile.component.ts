@@ -16,13 +16,18 @@ export class ProfileComponent implements OnInit {
   constructor(private authService: AuthService) { }
 
   ngOnInit(): void {
-    this.authService.getProfile().subscribe({
-      next: (profile) => {
-        this.user = profile;
-      },
-      error: (error) => {
-        this.errorMessage = error.error?.error || 'Failed to load profile.';
-      }
-    });
+    const user = this.authService.getUser();
+    if (user && user.id) {
+      this.authService.getProfile(user.id).subscribe({
+        next: (profile) => {
+          this.user = profile;
+        },
+        error: (error) => {
+          this.errorMessage = error.error?.error || 'Failed to load profile.';
+        }
+      });
+    } else {
+      this.errorMessage = 'User not found.';
+    }
   }
 }
