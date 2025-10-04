@@ -3,14 +3,19 @@ package logger
 import (
 	"os"
 
+	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/wire"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var Logger *zap.Logger
+// zapLogger is a logger that uses uber-go/zap.
+type zapLogger struct {
+	logger *zap.Logger
+}
 
-// InitLogger initializes the global logger
-func InitLogger() error {
+// NewZapLogger initializes a new zap logger.
+func NewZapLogger() (log.Logger, func(), error) {
 	config := zap.NewProductionConfig()
 	// Set log level based on environment
 	logLevel := os.Getenv("LOG_LEVEL")
@@ -48,23 +53,44 @@ func InitLogger() error {
 		"service": "api-gateway",
 	}
 
-	var err error
-	Logger, err = config.Build()
+	logger, err := config.Build()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
+	cleanup := func() {
+		logger.Sync()
+	}
+
+	return &zapLogger{logger: logger}, cleanup, nil
+}
+
+// Log implements the Kratos logger interface.
+func (l *zapLogger) Log(level log.Level, keyvals ...interface{}) error {
+	keylen := len(keyvals)
+	if keylen == 0 || keylen%2 != 0 {
+		l.logger.Warn("Keyvalues must appear in pairs", zap.Any("keyvals", keyvals))
+		return nil
+	}
+
+	var data []zap.Field
+	for i := 0; i < keylen; i += 2 {
+		data = append(data, zap.Any(keyvals[i].(string), keyvals[i+1]))
+	}
+
+	switch level {
+	case log.LevelDebug:
+		l.logger.Debug("", data...)
+	case log.LevelInfo:
+		l.logger.Info("", data...)
+	case log.LevelWarn:
+		l.logger.Warn("", data...)
+	case log.LevelError:
+		l.logger.Error("", data...)
+	case log.LevelFatal:
+		l.logger.Fatal("", data...)
+	}
 	return nil
 }
 
-// GetLogger returns the global logger instance
-func GetLogger() *zap.Logger {
-	return Logger
-}
-
-// Sync flushes any buffered log entries
-func Sync() {
-	if Logger != nil {
-		Logger.Sync()
-	}
-}
+var ProviderSet = wire.NewSet(NewZapLogger)

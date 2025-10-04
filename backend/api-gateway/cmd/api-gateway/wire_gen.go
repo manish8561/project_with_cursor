@@ -10,10 +10,10 @@ import (
 	"api-gateway/internal/biz"
 	"api-gateway/internal/conf"
 	"api-gateway/internal/data"
+	"api-gateway/internal/logger"
 	"api-gateway/internal/server"
 	"api-gateway/internal/service"
 	"github.com/go-kratos/kratos/v2"
-	"github.com/go-kratos/kratos/v2/log"
 )
 
 import (
@@ -23,18 +23,24 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
-	dataData, cleanup, err := data.NewData(confData, logger)
+func wireApp(confServer *conf.Server, confData *conf.Data) (*kratos.App, func(), error) {
+	logLogger, cleanup, err := logger.NewZapLogger()
 	if err != nil {
 		return nil, nil, err
 	}
-	greeterRepo := data.NewGreeterRepo(dataData, logger)
-	greeterUsecase := biz.NewGreeterUsecase(greeterRepo, logger)
+	dataData, cleanup2, err := data.NewData(confData, logLogger)
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	greeterRepo := data.NewGreeterRepo(dataData, logLogger)
+	greeterUsecase := biz.NewGreeterUsecase(greeterRepo, logLogger)
 	greeterService := service.NewGreeterService(greeterUsecase)
-	grpcServer := server.NewGRPCServer(confServer, greeterService, logger)
-	httpServer := server.NewHTTPServer(confServer, greeterService, logger)
-	app := newApp(logger, grpcServer, httpServer)
+	grpcServer := server.NewGRPCServer(confServer, greeterService, logLogger)
+	httpServer := server.NewHTTPServer(confServer, greeterService, logLogger)
+	app := newApp(logLogger, grpcServer, httpServer)
 	return app, func() {
+		cleanup2()
 		cleanup()
 	}, nil
 }

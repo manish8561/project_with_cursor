@@ -5,16 +5,13 @@ import (
 	"os"
 
 	"api-gateway/internal/conf"
-	"api-gateway/internal/logger"
 
 	"github.com/go-kratos/kratos/v2"
 	"github.com/go-kratos/kratos/v2/config"
 	"github.com/go-kratos/kratos/v2/config/file"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
-	"go.uber.org/zap"
 
 	_ "go.uber.org/automaxprocs"
 )
@@ -52,29 +49,6 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 func main() {
 	flag.Parse()
 
-	// Initialize zap logger
-	if err := logger.InitLogger(); err != nil {
-		panic(err)
-	}
-	defer logger.Sync()
-
-	// Create Kratos logger with zap backend
-	kratosLogger := log.With(log.NewStdLogger(os.Stdout),
-		"ts", log.DefaultTimestamp,
-		"caller", log.DefaultCaller,
-		"service.id", id,
-		"service.name", Name,
-		"service.version", Version,
-		"trace.id", tracing.TraceID(),
-		"span.id", tracing.SpanID(),
-	)
-
-	// Log initialization with zap
-	logger.GetLogger().Info("API Gateway starting",
-		zap.String("service.id", id),
-		zap.String("service.name", Name),
-		zap.String("service.version", Version),
-	)
 	c := config.New(
 		config.WithSource(
 			file.NewSource(flagconf),
@@ -91,7 +65,7 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, kratosLogger)
+	app, cleanup, err := wireApp(bc.Server, bc.Data)
 	if err != nil {
 		panic(err)
 	}
