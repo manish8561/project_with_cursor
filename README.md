@@ -480,3 +480,19 @@ KAFKA_TOPIC_USER_CREATED=user.created.v1
 
 - [Backend README](backend/README.md) - Detailed backend documentation
 - [Frontend README](frontend/README.md) - Frontend-specific instructions
+
+
+## Future Implementations
+
+- **Backend hardening**
+  - Implement rate limiting in the API Gateway and service-level middleware.
+  - Refactor route definitions into dedicated router modules in Go services.
+- **Observability**
+  - Add `trace_id` propagation across API Gateway, Auth Service, and User Service.
+  - Integrate OpenTelemetry for distributed tracing and metrics collection.
+- **Infrastructure**
+  - Add Kubernetes manifests/Helm charts for frontend and backend deployments.
+  - Introduce environment-specific deployment overlays (dev, test, prod).
+- **Quality and reliability**
+  - Expand automated test coverage (unit, integration, and API contract tests).
+  - Add CI checks for build, lint, test, and image validation.
