@@ -21,13 +21,14 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 - Docker and Docker Compose
 - Node.js (for frontend development)
-- Go 1.21+ (for backend development)
+- Go 1.26+ (for backend development)
 
 ## Quick Start
 
 ### Using Docker Compose (Recommended)
 
 1. **Start all services (backend + frontend)**:
+
    ```bash
    docker compose -f deploy/docker-compose.yml up -d --build
    ```
@@ -40,12 +41,14 @@ A full-stack application with Angular frontend and Go microservices backend.
    - MongoDB: localhost:27017
 
 Notes:
+
 - The frontend proxies API calls to the gateway via `/api` (configured in `frontend/nginx.conf`).
 - Angular environments use `apiUrl: '/api'` for containerized runs.
 
 ### Testing Environment
 
 1. **Start test environment**:
+
    ```bash
    cd deploy
    docker compose -f docker-compose.test.yml up --build
@@ -82,11 +85,13 @@ The API Gateway provides centralized Swagger documentation for all microservices
 The API documentation is organized by service:
 
 #### Authentication Service (`/api/auth`)
+
 - `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration  
+- `POST /api/auth/register` - User registration
 - `POST /api/auth/validate` - Token validation
 
 #### User Service (`/api/users`)
+
 - `GET /api/users/profile/:id` - Get user profile
 - `GET /api/users/list` - List users (paginated)
 - `PUT /api/users/profile/:id` - Update user profile
@@ -126,10 +131,12 @@ The API documentation is organized by service:
    - Authentication and protected routes
 
 ### Database
+
 - **MongoDB**: Shared database across all services
 - **Collections**: `users` (shared between auth and user services)
 
 ### Message Queue
+
 Pluggable (not enabled by default in Docker Compose).
 
 ## Logging (Zap)
@@ -137,19 +144,23 @@ Pluggable (not enabled by default in Docker Compose).
 All backend services use **Uber's Zap** for high-performance structured logging.
 
 ### Features
+
 - **Structured JSON Output**: All logs in JSON format for easy parsing
 - **Environment-based Log Levels**: Configure via `LOG_LEVEL` environment variable
 - **Service Identification**: Each log entry includes service name
 - **Performance Optimized**: Minimal overhead logging
 
 ### Log Levels
+
 Set the `LOG_LEVEL` environment variable:
+
 - `debug`: Most verbose, includes debug information
 - `info`: General information (default)
 - `warn`: Warning messages
 - `error`: Error messages only
 
 ### Example Log Output
+
 ```json
 {
   "level": "info",
@@ -162,6 +173,7 @@ Set the `LOG_LEVEL` environment variable:
 ```
 
 ### Usage in Code
+
 ```go
 import "your-service/internal/logger"
 
@@ -169,7 +181,7 @@ import "your-service/internal/logger"
 logger.InitLogger()
 
 // Use logger
-logger.GetLogger().Info("User authenticated", 
+logger.GetLogger().Info("User authenticated",
     zap.String("user_id", userID),
     zap.String("email", email),
 )
@@ -183,17 +195,20 @@ logger.GetLogger().Error("Database connection failed",
 ## Kafka Integration
 
 ### Architecture
+
 - **Event-Driven Communication**: Services communicate asynchronously via Kafka topics
 - **Producer**: Auth Service publishes user lifecycle events
 - **Consumer**: User Service processes events for data consistency
 - **Topics**: Versioned event schemas for backward compatibility
 
 ### Event Flow
+
 1. **User Registration**: Auth Service creates user → publishes `user.created.v1`
 2. **User Update**: User Service updates profile → publishes `user.updated.v1`
 3. **User Deletion**: User Service deletes user → publishes `user.deleted.v1`
 
 ### Configuration
+
 ```bash
 # Kafka Configuration
 KAFKA_BROKERS=kafka:9092
@@ -204,6 +219,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ```
 
 ### Event Schema Example
+
 ```json
 {
   "event_id": "evt_123456789",
@@ -223,6 +239,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ### Backend Development
 
 1. **Individual Service Development**:
+
    ```bash
    # Auth Service
    cd backend/auth-service
@@ -241,6 +258,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
    ```
 
 2. **Environment Variables**:
+
    ```bash
    # Auth Service
    PORT=8081
@@ -275,6 +293,7 @@ ng serve
 ## API Endpoints
 
 ### Authentication (via API Gateway)
+
 ```bash
 # Login
 curl -X POST http://localhost:8080/api/auth/login \
@@ -293,6 +312,7 @@ curl -X POST http://localhost:8080/api/auth/validate \
 ```
 
 ### User Management (via API Gateway)
+
 ```bash
 # Get user profile (requires authentication)
 curl -X GET http://localhost:8080/api/users/profile/user-id \
@@ -306,6 +326,7 @@ curl -X GET http://localhost:8080/api/users/list \
 ## Docker Commands
 
 ### Production
+
 ```bash
 # Start all services (detached)
 docker compose -f deploy/docker-compose.yml up -d --build
@@ -324,6 +345,7 @@ docker compose -f deploy/docker-compose.yml logs frontend
 ```
 
 ### Testing
+
 ```bash
 # Start test environment
 cd deploy
@@ -337,6 +359,7 @@ docker compose -f docker-compose.test.yml logs
 ```
 
 ### Individual Services
+
 ```bash
 # Build individual services
 docker build -t auth-service backend/auth-service/
@@ -375,6 +398,7 @@ curl http://localhost:8082/health  # User Service
    ```
 
 ### Logs and Debugging
+
 ```bash
 # View all service logs
 docker compose logs
@@ -391,6 +415,7 @@ docker compose logs -f
 ## Environment Variables
 
 ### Production Environment
+
 ```bash
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
@@ -420,6 +445,7 @@ KAFKA_TOPIC_USER_CREATED=user.created.v1
 ```
 
 ### Test Environment
+
 ```bash
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
@@ -481,8 +507,9 @@ KAFKA_TOPIC_USER_CREATED=user.created.v1
 - [Backend README](backend/README.md) - Detailed backend documentation
 - [Frontend README](frontend/README.md) - Frontend-specific instructions
 
-
 ## Future Implementations
+
+- **Upgrade versions for backend, db, frontend**
 
 - **Backend hardening**
   - Implement rate limiting in the API Gateway and service-level middleware.

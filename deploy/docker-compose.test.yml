@@ -1,7 +1,7 @@
 services:
   # MongoDB Database for Testing
   mongodb:
-    image: mongo:latest
+    image: mongo:8.0
     container_name: mongodb-test
     restart: unless-stopped
     ports:
