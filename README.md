@@ -323,6 +323,78 @@ curl -X GET http://localhost:8080/api/users/list \
   -H "Authorization: Bearer your-jwt-token"
 ```
 
+## Production Deployment Script
+
+A comprehensive production deployment script is available to automate the deployment process.
+
+### Quick Deployment
+
+```bash
+# Deploy the application (default command)
+./deploy.sh
+
+# Or explicitly specify deploy
+./deploy.sh deploy
+```
+
+### Available Commands
+
+```bash
+# Deploy the application
+./deploy.sh deploy
+
+# Stop all services
+./deploy.sh stop
+
+# Restart all services
+./deploy.sh restart
+
+# View and follow logs
+./deploy.sh logs
+
+# Check service status
+./deploy.sh status
+
+# Run health checks
+./deploy.sh health
+
+# Show help
+./deploy.sh help
+```
+
+### Features
+
+- **Environment Setup**: Automatically generates secure secrets and creates `.env` file
+- **Dependency Checks**: Validates Docker and Docker Compose installation
+- **Backup System**: Creates backups of existing data before deployment
+- **Health Monitoring**: Waits for services to become healthy with timeout
+- **Comprehensive Health Checks**: Tests all endpoints after deployment
+- **Graceful Error Handling**: Proper error handling and cleanup
+
+### Deployment Information
+
+After successful deployment, the script will display:
+
+```bash
+=== Production Deployment Information ===
+API Gateway:     http://localhost:8080
+Swagger UI:      http://localhost:8080/swagger/
+Auth Service:    http://localhost:8081
+User Service:    http://localhost:8082
+Frontend:        http://localhost:8085
+MongoDB:         localhost:27017
+
+=== Useful Commands ===
+View logs:       docker-compose -f deploy/docker-compose.yml logs -f
+Check status:    docker-compose -f deploy/docker-compose.yml ps
+Stop services:   docker-compose -f deploy/docker-compose.yml down
+Restart service: docker-compose -f deploy/docker-compose.yml restart [service-name]
+
+=== Monitoring ===
+Monitor health:  watch docker-compose -f deploy/docker-compose.yml ps
+View resources:  docker stats
+```
+
 ## Docker Commands
 
 ### Production
