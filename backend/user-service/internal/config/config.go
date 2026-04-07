@@ -16,7 +16,7 @@ func LoadConfig() *Config {
 	return &Config{
 		Port:     getEnv("PORT", "8082"),
 		MongoURI: getEnv("MONGO_URI", "mongodb://localhost:27017"),
-		MongoDB:  getEnv("MONGO_DB", "auth_db"),
+		MongoDB:  getEnv("MONGO_DB", "user_db"),
 	}
 }
 
@@ -26,4 +26,4 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
-} 
+}

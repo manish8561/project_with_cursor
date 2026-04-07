@@ -54,7 +54,7 @@ services:
     environment:
       - PORT=8082
       - MONGO_URI=mongodb://admin:password@mongodb:27017
-      - MONGO_DB=auth_db
+      - MONGO_DB=user_db
       - LOG_LEVEL=-1
     depends_on:
       - mongodb
