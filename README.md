@@ -132,12 +132,13 @@ The API documentation is organized by service:
 
 ### Database
 
-- **MongoDB**: Shared database across all services
-- **Collections**: `users` (shared between auth and user services)
+- **MongoDB**: Database-per-service model
+- **Auth data**: `auth_db.auth_users` (owned by auth-service)
+- **Profile data**: `user_db.user_profiles` (owned by user-service)
 
 ### Message Queue
 
-Pluggable (not enabled by default in Docker Compose).
+Kafka is enabled in Docker Compose for user lifecycle synchronization.
 
 ## Logging (Zap)
 
@@ -200,12 +201,13 @@ logger.GetLogger().Error("Database connection failed",
 - **Producer**: Auth Service publishes user lifecycle events
 - **Consumer**: User Service processes events for data consistency
 - **Topics**: Versioned event schemas for backward compatibility
+- **Docker Image**: `apache/kafka:4.1.2` (pinned for reproducible local/test runs)
 
 ### Event Flow
 
 1. **User Registration**: Auth Service creates user → publishes `user.created.v1`
-2. **User Update**: User Service updates profile → publishes `user.updated.v1`
-3. **User Deletion**: User Service deletes user → publishes `user.deleted.v1`
+2. **User Profile Sync**: User Service consumes `user.updated.v1` and upserts profile data
+3. **User Profile Cleanup**: User Service consumes `user.deleted.v1` and deletes profile data
 
 ### Configuration
 
@@ -269,7 +271,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
    # User Service
    PORT=8082
    MONGO_URI=mongodb://localhost:27017
-   MONGO_DB=auth_db
+   MONGO_DB=user_db
 
    # API Gateway
    PORT=8080
@@ -279,7 +281,10 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
    # Kafka (for local development)
    KAFKA_BROKERS=localhost:9092
    KAFKA_CLIENT_ID=auth-service
+   KAFKA_GROUP_ID=user-service-group
    KAFKA_TOPIC_USER_CREATED=user.created.v1
+   KAFKA_TOPIC_USER_UPDATED=user.updated.v1
+   KAFKA_TOPIC_USER_DELETED=user.deleted.v1
    ```
 
 ### Frontend Development
@@ -503,7 +508,9 @@ JWT_SECRET=your-super-secret-jwt-key
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password@mongodb:27017
-MONGO_DB=auth_db
+MONGO_DB=user_db
+KAFKA_CLIENT_ID=user-service
+KAFKA_GROUP_ID=user-service-group
 
 # API Gateway
 PORT=8080
@@ -514,6 +521,8 @@ USER_SERVICE_URL=http://user-service:8082
 KAFKA_BROKERS=kafka:9092
 KAFKA_CLIENT_ID=auth-service
 KAFKA_TOPIC_USER_CREATED=user.created.v1
+KAFKA_TOPIC_USER_UPDATED=user.updated.v1
+KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ```
 
 ### Test Environment
@@ -522,18 +531,20 @@ KAFKA_TOPIC_USER_CREATED=user.created.v1
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
 MONGO_INITDB_ROOT_PASSWORD=password123
-MONGO_INITDB_DATABASE=testdb
+MONGO_INITDB_DATABASE=auth_db
 
 # Auth Service
 PORT=8081
 MONGO_URI=mongodb://admin:password123@mongodb:27017
-MONGO_DB=testdb
+MONGO_DB=auth_db
 JWT_SECRET=test-jwt-secret-key-for-testing
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password123@mongodb:27017
-MONGO_DB=testdb
+MONGO_DB=user_db
+KAFKA_CLIENT_ID=user-service-test
+KAFKA_GROUP_ID=user-service-group-test
 
 # API Gateway
 PORT=8080
@@ -542,8 +553,10 @@ USER_SERVICE_URL=http://user-service:8082
 
 # Kafka
 KAFKA_BROKERS=kafka:9092
-KAFKA_CLIENT_ID=auth-service
+KAFKA_CLIENT_ID=auth-service-test
 KAFKA_TOPIC_USER_CREATED=user.created.v1
+KAFKA_TOPIC_USER_UPDATED=user.updated.v1
+KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ```
 
 ## Features
@@ -552,7 +565,7 @@ KAFKA_TOPIC_USER_CREATED=user.created.v1
 - **User Authentication**: JWT-based authentication system
 - **User Management**: Complete CRUD operations for user profiles
 - **API Gateway**: Single entry point with routing and middleware
-- **MongoDB Integration**: Shared database across services
+- **MongoDB Integration**: Service-owned databases with event-driven sync
 - **Event-Driven Communication**: Kafka-based async messaging between services
 - **Structured Logging**: Zap-based JSON logging across all services
 - **Docker Support**: Complete containerization for all services

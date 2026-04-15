@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -41,6 +42,36 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService, log)
 	log.Info("User service and handlers initialized")
 
+	// Initialize Kafka consumer for user lifecycle events.
+	consumer, err := services.NewUserEventConsumer(
+		cfg.KafkaBrokers,
+		cfg.KafkaGroupID,
+		cfg.KafkaClientID,
+		cfg.KafkaTopicUserCreated,
+		cfg.KafkaTopicUserUpdated,
+		cfg.KafkaTopicUserDeleted,
+		userService,
+		log,
+	)
+	if err != nil {
+		log.Error("Failed to initialize Kafka consumer", zap.Error(err))
+	}
+	defer func() {
+		if consumer != nil {
+			if closeErr := consumer.Close(); closeErr != nil {
+				log.Error("Failed to close Kafka consumer", zap.Error(closeErr))
+			}
+		}
+	}()
+
+	consumerCtx, cancelConsumer := context.WithCancel(context.Background())
+	defer cancelConsumer()
+	go func() {
+		if consumer != nil {
+			consumer.Start(consumerCtx)
+		}
+	}()
+
 	// Setup routes using the router
 	r := SetupRoutes(userHandler, log)
 
@@ -59,6 +90,7 @@ func main() {
 	}()
 
 	<-quit
+	cancelConsumer()
 	log.Info("Shutting down user service...")
 }
 

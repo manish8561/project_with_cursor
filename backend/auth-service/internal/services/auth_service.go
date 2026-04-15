@@ -15,20 +15,22 @@ import (
 type AuthService struct {
 	mongoConfig *config.MongoDBConfig
 	jwtService  *JWTService
+	publisher   *KafkaPublisher
 }
 
 // NewAuthService creates a new AuthService with the provided dependencies
-func NewAuthService(mongoConfig *config.MongoDBConfig, jwtService *JWTService) *AuthService {
+func NewAuthService(mongoConfig *config.MongoDBConfig, jwtService *JWTService, publisher *KafkaPublisher) *AuthService {
 	return &AuthService{
 		mongoConfig: mongoConfig,
 		jwtService:  jwtService,
+		publisher:   publisher,
 	}
 }
 
 // Login authenticates a user with the provided email and password.
 // Returns a JWT token upon successful authentication or an error if credentials are invalid.
 func (s *AuthService) Login(email, password string) (*models.LoginResponse, error) {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("auth_users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -52,7 +54,7 @@ func (s *AuthService) Login(email, password string) (*models.LoginResponse, erro
 // Register creates a new user account with the provided registration details.
 // Returns a success response if registration is successful, or an error if the user already exists.
 func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResponse, error) {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("auth_users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -80,6 +82,21 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResp
 	// Insert user into database
 	_, err = collection.InsertOne(ctx, newUser)
 	if err != nil {
+		return nil, err
+	}
+
+	event := models.UserEvent{
+		EventID:   primitive.NewObjectID().Hex(),
+		EventType: "user.created.v1",
+		Timestamp: time.Now().UTC(),
+		UserID:    newUser.ID,
+		Email:     newUser.Email,
+		Name:      newUser.Name,
+		Status:    newUser.Status,
+		Role:      newUser.Role,
+	}
+
+	if err := s.publisher.PublishUserCreated(ctx, event); err != nil {
 		return nil, err
 	}
 

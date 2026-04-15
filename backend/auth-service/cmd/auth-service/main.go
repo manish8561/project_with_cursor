@@ -41,8 +41,27 @@ func main() {
 	jwtService := services.NewJWTService(jwtConfig)
 	log.Info("JWT service initialized")
 
+	// Initialize Kafka publisher for user lifecycle events.
+	kafkaPublisher, err := services.NewKafkaPublisher(
+		cfg.KafkaBrokers,
+		cfg.KafkaClientID,
+		cfg.KafkaTopicUserCreated,
+		cfg.KafkaTopicUserUpdated,
+		cfg.KafkaTopicUserDeleted,
+	)
+	if err != nil {
+		log.Error("Failed to initialize Kafka publisher", zap.Error(err))
+	}
+	defer func() {
+		if kafkaPublisher != nil {
+			if closeErr := kafkaPublisher.Close(); closeErr != nil {
+				log.Error("Failed to close Kafka publisher", zap.Error(closeErr))
+			}
+		}
+	}()
+
 	// Initialize services
-	authService := services.NewAuthService(mongoConfig, jwtService)
+	authService := services.NewAuthService(mongoConfig, jwtService, kafkaPublisher)
 	authHandler := handlers.NewAuthHandler(authService, log)
 	log.Info("Auth service and handlers initialized")
 

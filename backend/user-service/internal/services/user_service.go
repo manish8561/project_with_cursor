@@ -1,11 +1,11 @@
 package services
 
 import (
-	"user-service/internal/config"
-	"user-service/internal/models"
 	"context"
 	"errors"
 	"time"
+	"user-service/internal/config"
+	"user-service/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -25,7 +25,7 @@ func NewUserService(mongoConfig *config.MongoDBConfig) *UserService {
 
 // GetUserByID retrieves a user by their unique identifier
 func (s *UserService) GetUserByID(id string) (*models.User, error) {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("user_profiles")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -40,7 +40,7 @@ func (s *UserService) GetUserByID(id string) (*models.User, error) {
 
 // ListUsers returns a paginated list of users and the total count
 func (s *UserService) ListUsers(page, pageSize int) (*models.UserListResponse, error) {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("user_profiles")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -79,16 +79,16 @@ func (s *UserService) ListUsers(page, pageSize int) (*models.UserListResponse, e
 
 // UpdateUser updates a user's information
 func (s *UserService) UpdateUser(id string, req models.UpdateUserRequest) (*models.User, error) {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("user_profiles")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	update := bson.M{
 		"$set": bson.M{
-			"name":       req.Name,
-			"email":      req.Email,
-			"role":       req.Role,
-			"updatedAt":  time.Now(),
+			"name":      req.Name,
+			"email":     req.Email,
+			"role":      req.Role,
+			"updatedAt": time.Now(),
 		},
 	}
 
@@ -107,7 +107,7 @@ func (s *UserService) UpdateUser(id string, req models.UpdateUserRequest) (*mode
 
 // DeleteUser deletes a user by ID
 func (s *UserService) DeleteUser(id string) error {
-	collection := s.mongoConfig.GetCollection("users")
+	collection := s.mongoConfig.GetCollection("user_profiles")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -121,4 +121,38 @@ func (s *UserService) DeleteUser(id string) error {
 	}
 
 	return nil
-} 
+}
+
+// UpsertUserProfileFromEvent creates or updates a profile from a user lifecycle event.
+func (s *UserService) UpsertUserProfileFromEvent(event models.UserEvent) error {
+	collection := s.mongoConfig.GetCollection("user_profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	update := bson.M{
+		"$set": bson.M{
+			"name":      event.Name,
+			"email":     event.Email,
+			"status":    event.Status,
+			"role":      event.Role,
+			"updatedAt": time.Now(),
+		},
+		"$setOnInsert": bson.M{
+			"_id":       event.UserID,
+			"createdAt": time.Now(),
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": event.UserID}, update, options.Update().SetUpsert(true))
+	return err
+}
+
+// DeleteUserProfileFromEvent removes a profile by user ID using event payload.
+func (s *UserService) DeleteUserProfileFromEvent(event models.UserEvent) error {
+	collection := s.mongoConfig.GetCollection("user_profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := collection.DeleteOne(ctx, bson.M{"_id": event.UserID})
+	return err
+}
