@@ -8,18 +8,21 @@ import (
 	"user-service/internal/models"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // UserService handles user-related business logic
 type UserService struct {
 	mongoConfig *config.MongoDBConfig
+	publisher   *KafkaPublisher
 }
 
 // NewUserService creates a new UserService with the provided MongoDB configuration
-func NewUserService(mongoConfig *config.MongoDBConfig) *UserService {
+func NewUserService(mongoConfig *config.MongoDBConfig, publisher *KafkaPublisher) *UserService {
 	return &UserService{
 		mongoConfig: mongoConfig,
+		publisher:   publisher,
 	}
 }
 
@@ -101,8 +104,26 @@ func (s *UserService) UpdateUser(id string, req models.UpdateUserRequest) (*mode
 		return nil, errors.New("user not found")
 	}
 
-	// Return updated user
-	return s.GetUserByID(id)
+	updatedUser, err := s.GetUserByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	event := models.UserEvent{
+		EventID:   primitive.NewObjectID().Hex(),
+		EventType: "user.updated.v1",
+		Timestamp: time.Now().UTC(),
+		UserID:    updatedUser.ID,
+		Email:     updatedUser.Email,
+		Name:      updatedUser.Name,
+		Status:    updatedUser.Status,
+		Role:      updatedUser.Role,
+	}
+	if err := s.publisher.PublishUserUpdated(ctx, event); err != nil {
+		// Keep API behavior successful even if async event publishing fails.
+	}
+
+	return updatedUser, nil
 }
 
 // DeleteUser deletes a user by ID
@@ -118,6 +139,16 @@ func (s *UserService) DeleteUser(id string) error {
 
 	if result.DeletedCount == 0 {
 		return errors.New("user not found")
+	}
+
+	event := models.UserEvent{
+		EventID:   primitive.NewObjectID().Hex(),
+		EventType: "user.deleted.v1",
+		Timestamp: time.Now().UTC(),
+		UserID:    id,
+	}
+	if err := s.publisher.PublishUserDeleted(ctx, event); err != nil {
+		// Keep API behavior successful even if async event publishing fails.
 	}
 
 	return nil

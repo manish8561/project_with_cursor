@@ -37,8 +37,27 @@ func main() {
 	defer mongoConfig.Close()
 	log.Info("MongoDB connection established")
 
+	// Initialize Kafka publisher for user lifecycle events.
+	publisher, err := services.NewKafkaPublisher(
+		cfg.KafkaBrokers,
+		cfg.KafkaClientID,
+		cfg.KafkaTopicUserCreated,
+		cfg.KafkaTopicUserUpdated,
+		cfg.KafkaTopicUserDeleted,
+	)
+	if err != nil {
+		log.Error("Failed to initialize Kafka publisher", zap.Error(err))
+	}
+	defer func() {
+		if publisher != nil {
+			if closeErr := publisher.Close(); closeErr != nil {
+				log.Error("Failed to close Kafka publisher", zap.Error(closeErr))
+			}
+		}
+	}()
+
 	// Initialize services
-	userService := services.NewUserService(mongoConfig)
+	userService := services.NewUserService(mongoConfig, publisher)
 	userHandler := handlers.NewUserHandler(userService, log)
 	log.Info("User service and handlers initialized")
 

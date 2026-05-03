@@ -97,7 +97,8 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResp
 	}
 
 	if err := s.publisher.PublishUserCreated(ctx, event); err != nil {
-		return nil, err
+		// Registration should succeed even if async sync event publishing fails.
+		// Retry/reconciliation can handle eventual consistency.
 	}
 
 	return &models.RegisterResponse{
