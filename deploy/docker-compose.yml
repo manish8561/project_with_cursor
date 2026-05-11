@@ -13,7 +13,8 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: auth_db
     volumes:
-      - mongodb_data:/data/db
+      # Bumped name so a fresh volume is used after Mongo major upgrades (avoids FCV mismatch with old data).
+      - mongodb_data_v8:/data/db
     networks:
       - microservices-network
 
@@ -143,7 +144,7 @@ services:
       - microservices-network
 
 volumes:
-  mongodb_data:
+  mongodb_data_v8:
 
 networks:
   microservices-network:

@@ -101,9 +101,20 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResp
 		// Retry/reconciliation can handle eventual consistency.
 	}
 
+	token, err := s.jwtService.GenerateToken(newUser.ID)
+	if err != nil {
+		return nil, errors.New("failed to generate token")
+	}
+
 	return &models.RegisterResponse{
 		Status:  "success",
 		Message: "User registered successfully",
+		Token:   token,
+		User: models.RegisterUserInfo{
+			ID:    newUser.ID,
+			Email: newUser.Email,
+			Name:  newUser.Name,
+		},
 	}, nil
 }
 

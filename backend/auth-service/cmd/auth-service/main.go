@@ -32,8 +32,13 @@ func main() {
 	mongoConfig, err := config.NewMongoDBConfig(cfg.MongoURI, cfg.MongoDB)
 	if err != nil {
 		log.Error("Failed to connect to MongoDB", zap.Error(err))
+		os.Exit(1)
 	}
-	defer mongoConfig.Close()
+	defer func() {
+		if closeErr := mongoConfig.Close(); closeErr != nil {
+			log.Error("MongoDB close error", zap.Error(closeErr))
+		}
+	}()
 	log.Info("MongoDB connection established")
 
 	// Initialize JWT service
