@@ -110,11 +110,6 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResp
 		Status:  "success",
 		Message: "User registered successfully",
 		Token:   token,
-		User: models.RegisterUserInfo{
-			ID:    newUser.ID,
-			Email: newUser.Email,
-			Name:  newUser.Name,
-		},
 	}, nil
 }
 

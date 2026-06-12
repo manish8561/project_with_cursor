@@ -16,19 +16,19 @@ export class DashboardComponent implements OnInit {
   constructor(private authService: AuthService) { }
 
   ngOnInit(): void {
-    const currentUser = this.authService.getUser();
-    if (currentUser && currentUser.id) {
-      this.authService.getProfile(currentUser.id).subscribe({
-        next: (profile) => {
-          this.user = profile;
-        },
-        error: (error) => {
-          console.error('Profile load error:', error);
-          this.errorMessage = error.error?.error || 'Failed to load profile.';
-        }
-      });
-    } else {
+    if (!this.authService.getUserId()) {
       this.errorMessage = 'User not authenticated or user ID not available.';
+      return;
     }
+
+    this.authService.getProfile().subscribe({
+      next: (profile) => {
+        this.user = profile;
+      },
+      error: (error) => {
+        console.error('Profile load error:', error);
+        this.errorMessage = error.error?.error || 'Failed to load profile.';
+      }
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CommonModule } from '@angular/common';
@@ -9,13 +9,29 @@ import { CommonModule } from '@angular/common';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   isDropdownOpen = false;
+  profile: { name?: string } | null = null;
 
   constructor(
     private router: Router,
     private authService: AuthService
   ) { }
+
+  ngOnInit(): void {
+    if (!this.authService.isLoggedIn()) {
+      return;
+    }
+
+    this.authService.getProfile().subscribe({
+      next: (profile) => {
+        this.profile = profile;
+      },
+      error: () => {
+        this.profile = null;
+      }
+    });
+  }
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: Event) {
@@ -30,16 +46,14 @@ export class HeaderComponent {
   }
 
   getUserInitials(): string {
-    const user = this.authService.getUser();
-    if (user && user.name) {
-      return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+    if (this.profile?.name) {
+      return this.profile.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
     }
     return 'U';
   }
 
   getUserName(): string {
-    const user = this.authService.getUser();
-    return user ? user.name : 'User';
+    return this.profile?.name ?? 'User';
   }
 
   logout() {

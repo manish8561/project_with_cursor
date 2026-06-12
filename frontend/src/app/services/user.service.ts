@@ -54,7 +54,7 @@ export class UserService {
 
   getProfile(userId: string): Observable<UserProfile> {
     return this.http.get<UserProfile>(
-      `${this.apiUrl}/api/users/profile/${userId}`,
+      `${this.apiUrl}/users/profile/${userId}`,
       { headers: this.getAuthHeaders() }
     ).pipe(
       catchError(this.handleError)
@@ -63,7 +63,7 @@ export class UserService {
 
   getCurrentUserProfile(): Observable<UserProfile> {
     return this.http.get<UserProfile>(
-      `${this.apiUrl}/api/users/me`,
+      `${this.apiUrl}/users/me`,
       { headers: this.getAuthHeaders() }
     ).pipe(
       catchError(this.handleError)
@@ -72,7 +72,7 @@ export class UserService {
 
   listUsers(page: number = 1, limit: number = 10): Observable<UserListResponse> {
     return this.http.get<UserListResponse>(
-      `${this.apiUrl}/api/users/list`,
+      `${this.apiUrl}/users/list`,
       { 
         headers: this.getAuthHeaders(),
         params: { page: page.toString(), limit: limit.toString() }
@@ -84,7 +84,7 @@ export class UserService {
 
   updateProfile(profileData: Partial<UserProfile>): Observable<UserProfile> {
     return this.http.patch<UserProfile>(
-      `${this.apiUrl}/api/users/profile`,
+      `${this.apiUrl}/users/profile`,
       profileData,
       { headers: this.getAuthHeaders() }
     ).pipe(

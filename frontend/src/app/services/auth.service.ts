@@ -19,11 +19,7 @@ export interface RegisterRequest {
 export interface AuthResponse {
     status: string;
     token: string;
-    user: {
-        id: string;
-        email: string;
-        name: string;
-    };
+    message?: string;
 }
 
 @Injectable({
@@ -40,7 +36,6 @@ export class AuthService {
                 if (response.token) {
                     if (this.isBrowser()) {
                         localStorage.setItem('token', response.token);
-                        localStorage.setItem('user', JSON.stringify(response.user));
                     }
                     return response;
                 }
@@ -55,7 +50,6 @@ export class AuthService {
                 if (response.token) {
                     if (this.isBrowser()) {
                         localStorage.setItem('token', response.token);
-                        localStorage.setItem('user', JSON.stringify(response.user));
                     }
                     return response;
                 }
@@ -67,7 +61,6 @@ export class AuthService {
     logout(): void {
         if (this.isBrowser()) {
             localStorage.removeItem('token');
-            localStorage.removeItem('user');
         }
     }
 
@@ -79,14 +72,28 @@ export class AuthService {
         return this.isBrowser() ? localStorage.getItem('token') : null;
     }
 
-    getUser(): any {
-        if (!this.isBrowser()) return null;
-        const user = localStorage.getItem('user');
-        return user ? JSON.parse(user) : null;
+    getUserId(): string | null {
+        const token = this.getToken();
+        if (!token) {
+            return null;
+        }
+
+        try {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            return decoded.user_id ?? null;
+        } catch {
+            return null;
+        }
     }
 
-    getProfile(userId: string): Observable<any> {
-        return this.http.get<any>(`${this.apiUrl}/api/users/profile/${userId}`, {
+    getProfile(): Observable<any> {
+        const userId = this.getUserId();
+        if (!userId) {
+            throw new Error('User not authenticated');
+        }
+
+        return this.http.get<any>(`${this.apiUrl}/users/profile/${userId}`, {
             headers: {
                 'Authorization': `Bearer ${this.getToken()}`
             }

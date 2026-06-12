@@ -34,7 +34,7 @@ type RegisterRequest struct {
 	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
 }
 
-// RegisterResponse represents a registration response (aligned with frontend AuthResponse).
+// RegisterResponse represents a registration response.
 type RegisterResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
