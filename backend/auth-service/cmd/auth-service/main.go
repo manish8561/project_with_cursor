@@ -12,6 +12,7 @@ import (
 	"auth-service/internal/logger"
 	"auth-service/internal/middleware"
 	"auth-service/internal/services"
+
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -46,6 +47,8 @@ func main() {
 	jwtService := services.NewJWTService(jwtConfig)
 	log.Info("JWT service initialized")
 
+	cookieConfig := config.NewCookieConfig(cfg.CookieSecure, cfg.CookieMaxAge, cfg.CookieSameSite, cfg.CookieDomain)
+
 	// Initialize Kafka publisher for user lifecycle events.
 	kafkaPublisher, err := services.NewKafkaPublisher(
 		cfg.KafkaBrokers,
@@ -67,11 +70,11 @@ func main() {
 
 	// Initialize services
 	authService := services.NewAuthService(mongoConfig, jwtService, kafkaPublisher)
-	authHandler := handlers.NewAuthHandler(authService, log)
+	authHandler := handlers.NewAuthHandler(authService, log, cookieConfig)
 	log.Info("Auth service and handlers initialized")
 
 	// Setup routes using the router
-	r := SetupRoutes(authHandler, log)
+	r := SetupRoutes(authHandler, log, cfg.AllowedOrigins)
 
 	// Start the server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
@@ -91,40 +94,52 @@ func main() {
 	log.Info("Shutting down auth service...")
 }
 
-// EnableCORS is a middleware function that enables CORS for all routes
-func EnableCORS(c *gin.Context) {
-	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-	if c.Request.Method == "OPTIONS" {
-		c.AbortWithStatus(http.StatusOK)
-		return
+// EnableCORS enables credentialed CORS for allowed origins.
+func EnableCORS(allowedOrigins []string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(allowedOrigins))
+	for _, origin := range allowedOrigins {
+		allowed[origin] = struct{}{}
 	}
 
-	c.Next()
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin != "" {
+			if _, ok := allowed[origin]; ok {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+				c.Writer.Header().Set("Vary", "Origin")
+			}
+		}
+
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+
+		c.Next()
+	}
 }
 
 // SetupRoutes configures all routes for the auth service
-func SetupRoutes(authHandler *handlers.AuthHandler, log logger.Logger) *gin.Engine {
+func SetupRoutes(authHandler *handlers.AuthHandler, log logger.Logger, allowedOrigins []string) *gin.Engine {
 	r := gin.Default()
 
-	// Enable CORS
-	r.Use(EnableCORS)
-
-	// User middleware
+	r.Use(EnableCORS(allowedOrigins))
 	r.Use(middleware.ZapMiddleware(log))
 
-	// API routes
 	api := r.Group("/api/auth")
 	{
 		api.POST("/login", authHandler.Login)
 		api.POST("/register", authHandler.Register)
 		api.POST("/validate", authHandler.ValidateToken)
 		api.POST("/refresh", authHandler.RefreshToken)
+		api.GET("/me", authHandler.Me)
+		api.POST("/logout", authHandler.Logout)
 	}
 
-	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy", "service": "auth-service"})
 	})

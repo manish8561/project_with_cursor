@@ -16,11 +16,6 @@ export class DashboardComponent implements OnInit {
   constructor(private authService: AuthService) { }
 
   ngOnInit(): void {
-    if (!this.authService.getUserId()) {
-      this.errorMessage = 'User not authenticated or user ID not available.';
-      return;
-    }
-
     this.authService.getProfile().subscribe({
       next: (profile) => {
         this.user = profile;

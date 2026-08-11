@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, tap } from 'rxjs/operators';
 
 export interface LoginRequest {
     email: string;
@@ -18,8 +18,8 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
     status: string;
-    token: string;
     message?: string;
+    user_id?: string;
 }
 
 @Injectable({
@@ -27,16 +27,21 @@ export interface AuthResponse {
 })
 export class AuthService {
     private apiUrl = environment.apiUrl;
+    private authenticated = false;
+    private userId: string | null = null;
+    private readonly httpOptions = { withCredentials: true };
 
     constructor(private http: HttpClient) { }
 
     login(credentials: LoginRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, credentials).pipe(
+        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, credentials, this.httpOptions).pipe(
+            tap(response => {
+                if (response.status === 'success') {
+                    this.authenticated = true;
+                }
+            }),
             map(response => {
-                if (response.token) {
-                    if (this.isBrowser()) {
-                        localStorage.setItem('token', response.token);
-                    }
+                if (response.status === 'success') {
                     return response;
                 }
                 throw new Error('Login failed');
@@ -45,12 +50,14 @@ export class AuthService {
     }
 
     register(userData: RegisterRequest): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, userData).pipe(
+        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, userData, this.httpOptions).pipe(
+            tap(response => {
+                if (response.status === 'success') {
+                    this.authenticated = true;
+                }
+            }),
             map(response => {
-                if (response.token) {
-                    if (this.isBrowser()) {
-                        localStorage.setItem('token', response.token);
-                    }
+                if (response.status === 'success') {
                     return response;
                 }
                 throw new Error('Registration failed');
@@ -58,46 +65,48 @@ export class AuthService {
         );
     }
 
-    logout(): void {
-        if (this.isBrowser()) {
-            localStorage.removeItem('token');
-        }
+    logout(): Observable<AuthResponse> {
+        return this.http.post<AuthResponse>(`${this.apiUrl}/auth/logout`, {}, this.httpOptions).pipe(
+            tap(() => this.clearSession()),
+            catchError(error => {
+                this.clearSession();
+                throw error;
+            })
+        );
+    }
+
+    /** Validates the HttpOnly session cookie with the auth service. */
+    checkAuth(): Observable<boolean> {
+        return this.http.get<AuthResponse>(`${this.apiUrl}/auth/me`, this.httpOptions).pipe(
+            map(response => {
+                const ok = response.status === 'success' && !!response.user_id;
+                this.authenticated = ok;
+                this.userId = ok ? (response.user_id ?? null) : null;
+                return ok;
+            }),
+            catchError(() => {
+                this.clearSession();
+                return of(false);
+            })
+        );
     }
 
     isLoggedIn(): boolean {
-        return this.isBrowser() && !!localStorage.getItem('token');
-    }
-
-    getToken(): string | null {
-        return this.isBrowser() ? localStorage.getItem('token') : null;
+        return this.authenticated;
     }
 
     getUserId(): string | null {
-        const token = this.getToken();
-        if (!token) {
-            return null;
-        }
-
-        try {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-            return decoded.user_id ?? null;
-        } catch {
-            return null;
-        }
+        return this.userId;
     }
 
     getProfile(): Observable<any> {
-        const userId = this.getUserId();
-        if (!userId) {
-            throw new Error('User not authenticated');
-        }
-
-        return this.http.get<any>(`${this.apiUrl}/users/profile/${userId}`, {
-            headers: {
-                'Authorization': `Bearer ${this.getToken()}`
-            }
-        }).pipe(
+        return this.http.get<any>(`${this.apiUrl}/users/me`, this.httpOptions).pipe(
+            tap(profile => {
+                if (profile?.id) {
+                    this.userId = profile.id;
+                    this.authenticated = true;
+                }
+            }),
             catchError(error => {
                 console.error('Error fetching profile:', error);
                 throw error;
@@ -105,7 +114,12 @@ export class AuthService {
         );
     }
 
-    isBrowser(): boolean {
-        return typeof window !== 'undefined' && !!window.localStorage;
+    clearSession(): void {
+        this.authenticated = false;
+        this.userId = null;
     }
-} 
+
+    isBrowser(): boolean {
+        return typeof window !== 'undefined';
+    }
+}

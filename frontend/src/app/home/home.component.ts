@@ -14,8 +14,10 @@ export class HomeComponent implements OnInit {
   constructor(private authService: AuthService, private router: Router) { }
 
   ngOnInit(): void {
-    if (this.authService.isLoggedIn()) {
-      this.router.navigate(['/dashboard']);
-    }
+    this.authService.checkAuth().subscribe(isLoggedIn => {
+      if (isLoggedIn) {
+        this.router.navigate(['/dashboard']);
+      }
+    });
   }
 }

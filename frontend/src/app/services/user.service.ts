@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { AuthService } from './auth.service';
 
 export interface UserProfile {
   id: string;
@@ -25,27 +24,15 @@ export interface UserListResponse {
 })
 export class UserService {
   private apiUrl = environment.apiUrl;
+  private readonly httpOptions = { withCredentials: true };
 
-  constructor(
-    private http: HttpClient,
-    private authService: AuthService
-  ) { }
-
-  private getAuthHeaders(): HttpHeaders {
-    const token = this.authService.getToken();
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
+  constructor(private http: HttpClient) { }
 
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An error occurred';
     if (error.error instanceof ErrorEvent) {
-      // Client-side error
       errorMessage = `Error: ${error.error.message}`;
     } else {
-      // Server-side error
       errorMessage = `Error Code: ${error.status}\nMessage: ${error.error?.message || error.message}`;
     }
     console.error(errorMessage);
@@ -55,7 +42,7 @@ export class UserService {
   getProfile(userId: string): Observable<UserProfile> {
     return this.http.get<UserProfile>(
       `${this.apiUrl}/users/profile/${userId}`,
-      { headers: this.getAuthHeaders() }
+      this.httpOptions
     ).pipe(
       catchError(this.handleError)
     );
@@ -64,7 +51,7 @@ export class UserService {
   getCurrentUserProfile(): Observable<UserProfile> {
     return this.http.get<UserProfile>(
       `${this.apiUrl}/users/me`,
-      { headers: this.getAuthHeaders() }
+      this.httpOptions
     ).pipe(
       catchError(this.handleError)
     );
@@ -73,8 +60,8 @@ export class UserService {
   listUsers(page: number = 1, limit: number = 10): Observable<UserListResponse> {
     return this.http.get<UserListResponse>(
       `${this.apiUrl}/users/list`,
-      { 
-        headers: this.getAuthHeaders(),
+      {
+        ...this.httpOptions,
         params: { page: page.toString(), limit: limit.toString() }
       }
     ).pipe(
@@ -82,11 +69,11 @@ export class UserService {
     );
   }
 
-  updateProfile(profileData: Partial<UserProfile>): Observable<UserProfile> {
-    return this.http.patch<UserProfile>(
-      `${this.apiUrl}/users/profile`,
+  updateProfile(userId: string, profileData: Partial<UserProfile>): Observable<UserProfile> {
+    return this.http.put<UserProfile>(
+      `${this.apiUrl}/users/profile/${userId}`,
       profileData,
-      { headers: this.getAuthHeaders() }
+      this.httpOptions
     ).pipe(
       catchError(this.handleError)
     );

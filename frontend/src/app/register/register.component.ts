@@ -130,9 +130,11 @@ export class RegisterComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        if (this.authService.isLoggedIn()) {
-            this.router.navigate(['/dashboard']);
-        }
+        this.authService.checkAuth().subscribe(isLoggedIn => {
+            if (isLoggedIn) {
+                this.router.navigate(['/dashboard']);
+            }
+        });
     }
 
     passwordMatchValidator(form: FormGroup) {
@@ -150,14 +152,13 @@ export class RegisterComponent implements OnInit {
             this.authService.register(userData).subscribe({
                 next: (response) => {
                     if (response.status === 'success') {
-                        localStorage.setItem('token', response.token);
                         this.router.navigate(['/dashboard']);
                     } else {
                         this.errorMessage = 'Registration failed. Please try again.';
                     }
                 },
                 error: (error) => {
-                    this.errorMessage = error.error?.message || 'Registration failed. Please try again.';
+                    this.errorMessage = error.error?.error || error.error?.message || 'Registration failed. Please try again.';
                 }
             });
         }

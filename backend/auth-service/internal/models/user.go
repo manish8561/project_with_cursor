@@ -23,7 +23,7 @@ type LoginRequest struct {
 // LoginResponse represents a login response
 type LoginResponse struct {
 	Status string `json:"status"`
-	Token  string `json:"token"`
+	Token  string `json:"token,omitempty"`
 }
 
 // RegisterRequest represents a registration request
@@ -38,7 +38,7 @@ type RegisterRequest struct {
 type RegisterResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
-	Token   string `json:"token"`
+	Token   string `json:"token,omitempty"`
 }
 
 // TokenValidationRequest represents a token validation request
@@ -61,5 +61,5 @@ type RefreshTokenRequest struct {
 // RefreshTokenResponse represents a token refresh response
 type RefreshTokenResponse struct {
 	Status string `json:"status"`
-	Token  string `json:"token"`
+	Token  string `json:"token,omitempty"`
 }

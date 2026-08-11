@@ -56,6 +56,9 @@ services:
       - MONGO_URI=mongodb://admin:password@mongodb:27017
       - MONGO_DB=auth_db
       - JWT_SECRET=your-super-secret-jwt-key
+      - COOKIE_SECURE=false
+      - COOKIE_SAME_SITE=Lax
+      - ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_CLIENT_ID=auth-service
       - KAFKA_TOPIC_USER_CREATED=user.created.v1
@@ -86,6 +89,8 @@ services:
       - PORT=8082
       - MONGO_URI=mongodb://admin:password@mongodb:27017
       - MONGO_DB=user_db
+      - JWT_SECRET=your-super-secret-jwt-key
+      - ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_CLIENT_ID=user-service
       - KAFKA_GROUP_ID=user-service-group

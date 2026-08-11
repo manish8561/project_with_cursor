@@ -9,31 +9,28 @@ import {
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    // Get the auth token from the service
-    const token = localStorage.getItem('token');
-    
-    // Clone the request and add the authorization header if token exists
-    if (token) {
-      request = request.clone({
-        setHeaders: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-    }
+    request = request.clone({ withCredentials: true });
 
-    // Handle the request and catch any errors
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Handle 401 Unauthorized responses
-        if (error.status === 401) {
-          // Clear local storage and redirect to login
-          localStorage.removeItem('token');
+        const isAuthProbe =
+          request.url.includes('/auth/login') ||
+          request.url.includes('/auth/register') ||
+          request.url.includes('/auth/me') ||
+          request.url.includes('/auth/logout');
+
+        if (error.status === 401 && !isAuthProbe) {
+          this.authService.clearSession();
           this.router.navigate(['/login']);
         }
         return throwError(() => error);

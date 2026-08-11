@@ -19,17 +19,19 @@ export class HeaderComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    if (!this.authService.isLoggedIn()) {
-      return;
-    }
-
-    this.authService.getProfile().subscribe({
-      next: (profile) => {
-        this.profile = profile;
-      },
-      error: () => {
-        this.profile = null;
+    this.authService.checkAuth().subscribe(isLoggedIn => {
+      if (!isLoggedIn) {
+        return;
       }
+
+      this.authService.getProfile().subscribe({
+        next: (profile) => {
+          this.profile = profile;
+        },
+        error: () => {
+          this.profile = null;
+        }
+      });
     });
   }
 
@@ -57,13 +59,15 @@ export class HeaderComponent implements OnInit {
   }
 
   logout() {
-    // Use the auth service to logout
-    this.authService.logout();
-
-    // Close dropdown
-    this.isDropdownOpen = false;
-
-    // Navigate to login page
-    this.router.navigate(['/login']);
+    this.authService.logout().subscribe({
+      next: () => {
+        this.isDropdownOpen = false;
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        this.isDropdownOpen = false;
+        this.router.navigate(['/login']);
+      }
+    });
   }
 }

@@ -16,11 +16,6 @@ export class ProfileComponent implements OnInit {
   constructor(private authService: AuthService) { }
 
   ngOnInit(): void {
-    if (!this.authService.getUserId()) {
-      this.errorMessage = 'User not found.';
-      return;
-    }
-
     this.authService.getProfile().subscribe({
       next: (profile) => {
         this.user = profile;

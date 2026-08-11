@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 // Config holds all configuration for the auth service
@@ -15,6 +16,11 @@ type Config struct {
 	KafkaTopicUserCreated string
 	KafkaTopicUserUpdated string
 	KafkaTopicUserDeleted string
+	CookieSecure          bool
+	CookieMaxAge          int
+	CookieSameSite        string
+	CookieDomain          string
+	AllowedOrigins        []string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -29,7 +35,24 @@ func LoadConfig() *Config {
 		KafkaTopicUserCreated: getEnv("KAFKA_TOPIC_USER_CREATED", "user.created.v1"),
 		KafkaTopicUserUpdated: getEnv("KAFKA_TOPIC_USER_UPDATED", "user.updated.v1"),
 		KafkaTopicUserDeleted: getEnv("KAFKA_TOPIC_USER_DELETED", "user.deleted.v1"),
+		CookieSecure:          parseBoolEnv(os.Getenv("COOKIE_SECURE"), false),
+		CookieMaxAge:          parseIntEnv(os.Getenv("COOKIE_MAX_AGE"), 24*60*60),
+		CookieSameSite:        getEnv("COOKIE_SAME_SITE", "Lax"),
+		CookieDomain:          getEnv("COOKIE_DOMAIN", ""),
+		AllowedOrigins:        splitCSV(getEnv("ALLOWED_ORIGINS", "http://localhost:4200,http://localhost:8085")),
 	}
+}
+
+func splitCSV(value string) []string {
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 // getEnv gets an environment variable or returns a default value

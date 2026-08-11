@@ -1,17 +1,14 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 
 	"user-service/internal/logger"
+	"user-service/internal/middleware"
 	"user-service/internal/models"
 	"user-service/internal/services"
 )
@@ -30,69 +27,58 @@ func NewUserHandler(userService *services.UserService, logger logger.Logger) *Us
 	}
 }
 
-// GetUserByID handles requests to get the current user's profile using JWT token
-func (h *UserHandler) GetUserByID(c *gin.Context) {
-	// Get token from Authorization header
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		h.logger.Error("Missing Authorization header",
-			zap.String("client_ip", c.ClientIP()),
-		)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization token is required"})
+// GetCurrentUser handles requests for the authenticated user's profile.
+func (h *UserHandler) GetCurrentUser(c *gin.Context) {
+	userID, ok := c.Get(middleware.ContextUserIDKey)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// Extract the token from "Bearer <token>"
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader { // No Bearer prefix found
-		h.logger.Error("Invalid Authorization header format")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token format"})
-		return
-	}
-
-	// Parse the token to get user ID
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validate the alg is what you expect:
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		// Replace with your actual secret key
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
-
-	if err != nil {
-		h.logger.Error("Invalid token",
-			zap.Error(err),
-			zap.String("client_ip", c.ClientIP()),
-		)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-		return
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		h.logger.Error("Invalid token claims")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
-		return
-	}
-
-	// Get user ID from token claims
-	userID, ok := claims["user_id"].(string)
-	if !ok || userID == "" {
-		h.logger.Error("User ID not found in token")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user ID in token"})
-		return
-	}
-
-	h.logger.Info("Getting user by ID from token",
-		zap.String("user_id", userID),
+	id, _ := userID.(string)
+	h.logger.Info("Getting current user profile",
+		zap.String("user_id", id),
 		zap.String("client_ip", c.ClientIP()),
 	)
 
-	user, err := h.userService.GetUserByID(userID)
+	user, err := h.userService.GetUserByID(id)
 	if err != nil {
 		h.logger.Warn("User not found",
-			zap.String("user_id", userID),
+			zap.String("user_id", id),
+			zap.Error(err),
+			zap.String("client_ip", c.ClientIP()),
+		)
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// GetUserByID handles requests to get a user profile by ID (must match the authenticated user).
+func (h *UserHandler) GetUserByID(c *gin.Context) {
+	authUserID, _ := c.Get(middleware.ContextUserIDKey)
+	authID, _ := authUserID.(string)
+	id := c.Param("id")
+
+	if id == "" || id == "me" {
+		id = authID
+	}
+
+	if id != authID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	h.logger.Info("Getting user by ID",
+		zap.String("user_id", id),
+		zap.String("client_ip", c.ClientIP()),
+	)
+
+	user, err := h.userService.GetUserByID(id)
+	if err != nil {
+		h.logger.Warn("User not found",
+			zap.String("user_id", id),
 			zap.Error(err),
 			zap.String("client_ip", c.ClientIP()),
 		)
@@ -101,7 +87,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	}
 
 	h.logger.Info("User retrieved successfully",
-		zap.String("user_id", userID),
+		zap.String("user_id", id),
 		zap.String("client_ip", c.ClientIP()),
 	)
 	c.JSON(http.StatusOK, user)
@@ -150,12 +136,19 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 
 // UpdateUser handles requests to update a user
 func (h *UserHandler) UpdateUser(c *gin.Context) {
+	authUserID, _ := c.Get(middleware.ContextUserIDKey)
+	authID, _ := authUserID.(string)
 	id := c.Param("id")
 	if id == "" {
 		h.logger.Error("Missing user ID in update request",
 			zap.String("client_ip", c.ClientIP()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		return
+	}
+
+	if id != authID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 		return
 	}
 
@@ -195,12 +188,19 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 // DeleteUser handles requests to delete a user
 func (h *UserHandler) DeleteUser(c *gin.Context) {
+	authUserID, _ := c.Get(middleware.ContextUserIDKey)
+	authID, _ := authUserID.(string)
 	id := c.Param("id")
 	if id == "" {
 		h.logger.Error("Missing user ID in delete request",
 			zap.String("client_ip", c.ClientIP()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user ID is required"})
+		return
+	}
+
+	if id != authID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden"})
 		return
 	}
 
@@ -222,7 +222,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 
 	h.logger.Info("User deleted successfully",
 		zap.String("user_id", id),
-			zap.String("client_ip", c.ClientIP()),
+		zap.String("client_ip", c.ClientIP()),
 	)
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
