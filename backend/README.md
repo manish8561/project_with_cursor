@@ -8,18 +8,21 @@ The application has been decomposed into the following microservices:
 
 ### 1. Auth Service (`auth-service`)
 - **Port**: 8081
-- **Purpose**: Handles user authentication, registration, and JWT token management
+- **Purpose**: Handles user authentication, registration, and session management via HttpOnly cookies
 - **Endpoints**:
-  - `POST /api/auth/login` - User login
-  - `POST /api/auth/register` - User registration
-  - `POST /api/auth/validate` - Token validation
-  - `POST /api/auth/refresh` - Token refresh
+  - `POST /api/auth/login` - User login (sets `access_token` cookie)
+  - `POST /api/auth/register` - User registration (sets `access_token` cookie)
+  - `GET /api/auth/me` - Get current session user ID from cookie
+  - `POST /api/auth/logout` - Clear session cookie
+  - `POST /api/auth/validate` - Token validation (cookie, body, or Bearer)
+  - `POST /api/auth/refresh` - Refresh session (sets new cookie)
 
 ### 2. User Service (`user-service`)
 - **Port**: 8082
 - **Purpose**: Manages user data and profiles
-- **Endpoints**:
-  - `GET /api/users/profile/:id` - Get user by ID
+- **Endpoints** (all require `access_token` cookie or Bearer token):
+  - `GET /api/users/me` - Get current user's profile
+  - `GET /api/users/profile/:id` - Get user profile by ID (must match session user)
   - `GET /api/users/list` - List users (paginated)
   - `PUT /api/users/profile/:id` - Update user
   - `DELETE /api/users/profile/:id` - Delete user
@@ -34,8 +37,23 @@ The application has been decomposed into the following microservices:
   - Load balancing (future enhancement)
 
 ### 4. Shared Database
-- **MongoDB**: Single database shared across services
-- **Collections**: `users` (shared between auth and user services)
+- **MongoDB**: Database-per-service model
+- **Collections**: `auth_db.auth_users` (auth-service), `user_db.user_profiles` (user-service, synced via Kafka)
+
+## Authentication
+
+Sessions use an **HttpOnly cookie** named `access_token` containing a JWT. The browser sends this cookie automatically on subsequent requests; the frontend does not store tokens in `localStorage`.
+
+| Setting | Env var | Default |
+|---------|---------|---------|
+| Cookie name | — | `access_token` |
+| HttpOnly | — | `true` |
+| SameSite | `COOKIE_SAME_SITE` | `Lax` |
+| Secure | `COOKIE_SECURE` | `false` (set `true` in HTTPS production) |
+| Max age | `COOKIE_MAX_AGE` | `86400` (24 hours) |
+| Allowed origins | `ALLOWED_ORIGINS` | `http://localhost:4200,http://localhost:8085` |
+
+Both auth-service and user-service must share the same `JWT_SECRET`. CORS is configured with explicit origins and `Access-Control-Allow-Credentials: true` (wildcard `*` is not used with cookies).
 
 ## Directory Structure
 
@@ -136,12 +154,17 @@ backend/
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB=auth_db
    JWT_SECRET=your-secret-key
+   COOKIE_SECURE=false
+   COOKIE_SAME_SITE=Lax
+   ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
    LOG_LEVEL=info
 
    # User Service
    PORT=8082
    MONGO_URI=mongodb://localhost:27017
-   MONGO_DB=auth_db
+   MONGO_DB=user_db
+   JWT_SECRET=your-secret-key
+   ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
    LOG_LEVEL=info
 
    # API Gateway
@@ -154,32 +177,52 @@ backend/
 ## API Endpoints
 
 ### Authentication (via API Gateway)
+
+Login and register set an `access_token` HttpOnly cookie. Use `-c` / `-b` with curl to persist and send cookies.
+
 ```bash
-# Login
-curl -X POST http://localhost:8080/api/auth/login \
+# Login (saves cookie to cookies.txt)
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"password"}'
 
 # Register
-curl -X POST http://localhost:8080/api/auth/register \
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","email":"user@example.com","password":"password","confirmPassword":"password"}'
 
-# Validate Token
+# Current session
+curl -b cookies.txt http://localhost:8080/api/auth/me
+
+# Logout
+curl -b cookies.txt -X POST http://localhost:8080/api/auth/logout
+
+# Validate session (cookie sent automatically with -b)
+curl -b cookies.txt -X POST http://localhost:8080/api/auth/validate
+
+# Refresh session (sets a new cookie)
+curl -b cookies.txt -c cookies.txt -X POST http://localhost:8080/api/auth/refresh
+```
+
+Legacy Bearer/body token usage is still supported for validate and refresh:
+
+```bash
 curl -X POST http://localhost:8080/api/auth/validate \
   -H "Content-Type: application/json" \
   -d '{"token":"your-jwt-token"}'
 ```
 
 ### User Management (via API Gateway)
+
 ```bash
-# Get user profile (requires authentication)
-curl -X GET http://localhost:8080/api/users/profile/user-id \
-  -H "Authorization: Bearer your-jwt-token"
+# Get current user profile (requires session cookie)
+curl -b cookies.txt http://localhost:8080/api/users/me
+
+# Get user profile by ID (must match session user)
+curl -b cookies.txt http://localhost:8080/api/users/profile/USER_ID
 
 # List users (requires authentication)
-curl -X GET http://localhost:8080/api/users/list \
-  -H "Authorization: Bearer your-jwt-token"
+curl -b cookies.txt http://localhost:8080/api/users/list
 ```
 
 ## Rate Limiting (API Gateway)
@@ -320,7 +363,8 @@ logger.GetLogger().Error("Database connection failed",
 1. **Port conflicts**: Ensure ports 8080, 8081, 8082, and 27017 are available
 2. **MongoDB connection**: Check if MongoDB is running and accessible
 3. **Service communication**: Verify service URLs in API Gateway configuration
-4. **Authentication errors**: Check JWT secret configuration
+4. **Authentication errors**: Check `JWT_SECRET` matches across auth-service and user-service; verify `ALLOWED_ORIGINS` includes your frontend origin when using credentialed CORS
+5. **Cookie not sent**: Ensure requests use credentials (`withCredentials: true` in browsers); in Docker, use the frontend at `http://localhost:8085` so `/api` is same-origin
 
 ### Logs
 ```bash
@@ -358,12 +402,17 @@ PORT=8081
 MONGO_URI=mongodb://admin:password@mongodb:27017
 MONGO_DB=auth_db
 JWT_SECRET=your-super-secret-jwt-key
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=Lax
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 LOG_LEVEL=info
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password@mongodb:27017
-MONGO_DB=auth_db
+MONGO_DB=user_db
+JWT_SECRET=your-super-secret-jwt-key
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 LOG_LEVEL=info
 
 # API Gateway
@@ -385,12 +434,17 @@ PORT=8081
 MONGO_URI=mongodb://admin:password123@mongodb:27017
 MONGO_DB=testdb
 JWT_SECRET=test-jwt-secret-key-for-testing
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=Lax
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 LOG_LEVEL=debug
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password123@mongodb:27017
 MONGO_DB=testdb
+JWT_SECRET=test-jwt-secret-key-for-testing
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 LOG_LEVEL=debug
 
 # API Gateway

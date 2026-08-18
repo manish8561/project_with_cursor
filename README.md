@@ -75,7 +75,7 @@ The API Gateway provides centralized Swagger documentation for all microservices
 
 ✅ **Centralized Documentation**: Single entry point for all API documentation
 ✅ **Interactive Testing**: Test APIs directly from the Swagger UI
-✅ **Authentication Support**: JWT Bearer token authentication
+✅ **Authentication Support**: HttpOnly cookie session (`access_token`) with Bearer fallback for API clients
 ✅ **Request/Response Examples**: Detailed examples for all endpoints
 ✅ **Error Codes**: Comprehensive error response documentation
 ✅ **API Versioning**: Version control for API changes
@@ -86,15 +86,20 @@ The API documentation is organized by service:
 
 #### Authentication Service (`/api/auth`)
 
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/validate` - Token validation
+- `POST /api/auth/login` - User login (sets session cookie)
+- `POST /api/auth/register` - User registration (sets session cookie)
+- `GET /api/auth/me` - Current session user ID
+- `POST /api/auth/logout` - Clear session cookie
+- `POST /api/auth/validate` - Validate session (cookie, body, or Bearer)
+- `POST /api/auth/refresh` - Refresh session cookie
 
 #### User Service (`/api/users`)
 
-- `GET /api/users/profile/:id` - Get user profile
+- `GET /api/users/me` - Get current user's profile
+- `GET /api/users/profile/:id` - Get user profile (must match session user)
 - `GET /api/users/list` - List users (paginated)
 - `PUT /api/users/profile/:id` - Update user profile
+- `DELETE /api/users/profile/:id` - Delete user profile
 
 ### Why Centralized Documentation?
 
@@ -110,24 +115,26 @@ The API documentation is organized by service:
 
 1. **Auth Service** (Port 8081)
    - User authentication and registration
-   - JWT token management
-   - Password hashing and validation
+   - HttpOnly cookie session management (JWT stored in `access_token` cookie)
+   - Password validation
 
 2. **User Service** (Port 8082)
    - User profile management
    - User data CRUD operations
    - User search and listing
+   - Cookie-based auth middleware on all `/api/users/*` routes
 
 3. **API Gateway** (Port 8080)
    - Single entry point for all requests
    - Request routing to appropriate services
-   - Authentication middleware
+   - Forwards cookies between client and backend services
    - CORS handling
    - **Centralized API Documentation**
 
 4. **Frontend** (Port 8085 in Docker)
    - Angular application
    - User interface for all operations
+   - Cookie sessions via `withCredentials: true` (no token in localStorage)
    - Authentication and protected routes
 
 ### Database
@@ -267,11 +274,16 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB=auth_db
    JWT_SECRET=your-secret-key
+   COOKIE_SECURE=false
+   COOKIE_SAME_SITE=Lax
+   ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 
    # User Service
    PORT=8082
    MONGO_URI=mongodb://localhost:27017
    MONGO_DB=user_db
+   JWT_SECRET=your-secret-key
+   ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 
    # API Gateway
    PORT=8080
@@ -299,33 +311,34 @@ ng serve
 
 ### Authentication (via API Gateway)
 
+Login and register set an `access_token` HttpOnly cookie. Use `-c` / `-b` with curl to persist and send cookies.
+
 ```bash
-# Login
-curl -X POST http://localhost:8080/api/auth/login \
+# Login (saves cookie to cookies.txt)
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"password"}'
 
 # Register
-curl -X POST http://localhost:8080/api/auth/register \
+curl -c cookies.txt -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","email":"user@example.com","password":"password","confirmPassword":"password"}'
 
-# Validate Token
-curl -X POST http://localhost:8080/api/auth/validate \
-  -H "Content-Type: application/json" \
-  -d '{"token":"your-jwt-token"}'
+# Current session
+curl -b cookies.txt http://localhost:8080/api/auth/me
+
+# Logout
+curl -b cookies.txt -X POST http://localhost:8080/api/auth/logout
 ```
 
 ### User Management (via API Gateway)
 
 ```bash
-# Get user profile (requires authentication)
-curl -X GET http://localhost:8080/api/users/profile/user-id \
-  -H "Authorization: Bearer your-jwt-token"
+# Get current user profile (requires session cookie)
+curl -b cookies.txt http://localhost:8080/api/users/me
 
 # List users (requires authentication)
-curl -X GET http://localhost:8080/api/users/list \
-  -H "Authorization: Bearer your-jwt-token"
+curl -b cookies.txt http://localhost:8080/api/users/list
 ```
 
 ## Production Deployment Script
@@ -465,7 +478,7 @@ curl http://localhost:8082/health  # User Service
 1. **Port conflicts**: Ensure ports 8080, 8081, 8082, 8085, and 27017 are available
 2. **MongoDB connection**: Check if MongoDB is running and accessible
 3. **Service communication**: Verify service URLs in API Gateway configuration
-4. **Authentication errors**: Check JWT secret configuration
+4. **Authentication errors**: Check `JWT_SECRET` matches across auth-service and user-service; verify cookies are sent (`withCredentials: true` in browser, `-b` in curl)
 
 5. **Image pull/DNS errors**: If you see errors like `server misbehaving` when pulling base images, try:
    ```bash
@@ -504,11 +517,16 @@ PORT=8081
 MONGO_URI=mongodb://admin:password@mongodb:27017
 MONGO_DB=auth_db
 JWT_SECRET=your-super-secret-jwt-key
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=Lax
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 
 # User Service
 PORT=8082
 MONGO_URI=mongodb://admin:password@mongodb:27017
 MONGO_DB=user_db
+JWT_SECRET=your-super-secret-jwt-key
+ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
 KAFKA_CLIENT_ID=user-service
 KAFKA_GROUP_ID=user-service-group
 
@@ -562,7 +580,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ## Features
 
 - **Microservices Architecture**: Scalable and maintainable service decomposition
-- **User Authentication**: JWT-based authentication system
+- **User Authentication**: HttpOnly cookie session (JWT in `access_token` cookie)
 - **User Management**: Complete CRUD operations for user profiles
 - **API Gateway**: Single entry point with routing and middleware
 - **MongoDB Integration**: Service-owned databases with event-driven sync
