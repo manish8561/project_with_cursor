@@ -120,6 +120,7 @@ services:
     environment:
       - PORT=8080
       - LOG_LEVEL=-1
+    command: ["./api-gateway", "-conf", "/data/conf/config.yaml"]
     depends_on:
       - auth-service
       - user-service
