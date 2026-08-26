@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-header',
   imports: [RouterLink, RouterLinkActive, CommonModule],
   templateUrl: './header.component.html',
-  styleUrl: './header.component.scss'
+  styleUrl: './header.component.scss',
 })
 export class HeaderComponent implements OnInit {
   isDropdownOpen = false;
@@ -15,23 +15,14 @@ export class HeaderComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private authService: AuthService
-  ) { }
+    private authService: AuthService,
+  ) {}
 
   ngOnInit(): void {
-    this.authService.checkAuth().subscribe(isLoggedIn => {
+    this.authService.checkAuth().subscribe((isLoggedIn) => {
       if (!isLoggedIn) {
         return;
       }
-
-      this.authService.getProfile().subscribe({
-        next: (profile) => {
-          this.profile = profile;
-        },
-        error: () => {
-          this.profile = null;
-        }
-      });
     });
   }
 
@@ -45,11 +36,26 @@ export class HeaderComponent implements OnInit {
 
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;
+
+    if (this.isDropdownOpen && !this.profile && this.authService.isLoggedIn()) {
+      this.authService.getProfile().subscribe({
+        next: (profile) => {
+          this.profile = profile;
+        },
+        error: () => {
+          this.profile = null;
+        },
+      });
+    }
   }
 
   getUserInitials(): string {
     if (this.profile?.name) {
-      return this.profile.name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+      return this.profile.name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase();
     }
     return 'U';
   }
@@ -67,7 +73,7 @@ export class HeaderComponent implements OnInit {
       error: () => {
         this.isDropdownOpen = false;
         this.router.navigate(['/login']);
-      }
+      },
     });
   }
 }

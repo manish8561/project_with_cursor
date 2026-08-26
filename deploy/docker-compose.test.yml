@@ -77,7 +77,8 @@ services:
       - microservices-test-network
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8081/health"]
-      interval: 30s
+      start_period: 30s
+      interval: 999d
       timeout: 10s
       retries: 3
 
@@ -112,7 +113,8 @@ services:
       - microservices-test-network
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8082/health"]
-      interval: 30s
+      start_period: 30s
+      interval: 999d
       timeout: 10s
       retries: 3
 
@@ -137,7 +139,8 @@ services:
       - microservices-test-network
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
-      interval: 30s
+      start_period: 30s
+      interval: 999d
       timeout: 10s
       retries: 3
     volumes:
