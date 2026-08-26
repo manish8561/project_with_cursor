@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # MongoDB Database
   mongodb:
@@ -9,9 +7,10 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: auth_db
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=auth_db
+      - GLIBC_TUNABLES=glibc.pthread.rseq=1
     volumes:
       # Bumped name so a fresh volume is used after Mongo major upgrades (avoids FCV mismatch with old data).
       - mongodb_data_v8:/data/db
