@@ -5,6 +5,8 @@
 
 set -e  # Exit on any error
 
+COMPOSE_FILE="deploy/docker-compose.prod.yml"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -61,17 +63,26 @@ setup_environment() {
         cat > .env << EOF
 # Production Environment Variables
 MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=$(openssl rand -base64 32)
+MONGO_INITDB_ROOT_PASSWORD=$(openssl rand -hex 32)
 MONGO_INITDB_DATABASE=auth_db
-JWT_SECRET=$(openssl rand -base64 64)
+JWT_SECRET=$(openssl rand -hex 64)
 LOG_LEVEL=0
 API_GATEWAY_PORT=8080
-AUTH_SERVICE_PORT=8081
-USER_SERVICE_PORT=8082
 FRONTEND_PORT=8085
+# Set COOKIE_SECURE=true and COOKIE_SAME_SITE=None when serving over HTTPS
+COOKIE_SECURE=false
+COOKIE_SAME_SITE=Lax
+# Comma-separated origins allowed by auth/user services (set your real frontend URL)
+ALLOWED_ORIGINS=http://localhost:8085
 EOF
         print_success "Created .env file with secure random values"
     fi
+
+    # Compose reads .env from the project directory (repo root)
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
     
     print_success "Production environment setup complete"
 }
@@ -103,11 +114,11 @@ deploy_services() {
     
     # Stop existing services
     print_status "Stopping existing services..."
-    docker compose -f deploy/docker-compose.yml down --remove-orphans || true
+    docker compose -f "$COMPOSE_FILE" --env-file .env down --remove-orphans || true
     
     # Build and start services
     print_status "Building and starting services..."
-    docker compose -f deploy/docker-compose.yml up -d --build
+    docker compose -f "$COMPOSE_FILE" --env-file .env up -d --build
     
     print_success "Services deployed successfully"
 }
@@ -124,14 +135,14 @@ wait_for_services() {
         print_status "Waiting for $service to be healthy..."
         
         while [ $attempt -le $max_attempts ]; do
-            if docker compose -f deploy/docker-compose.yml ps "$service" | grep -q "healthy\|Up"; then
+            if docker compose -f "$COMPOSE_FILE" --env-file .env ps "$service" | grep -q "healthy\|Up"; then
                 print_success "$service is healthy"
                 break
             fi
             
             if [ $attempt -eq $max_attempts ]; then
                 print_error "$service failed to become healthy within ${max_attempts} attempts"
-                docker compose -f deploy/docker-compose.yml logs "$service"
+                docker compose -f "$COMPOSE_FILE" --env-file .env logs "$service"
                 exit 1
             fi
             
@@ -145,36 +156,21 @@ wait_for_services() {
     print_success "All services are healthy and running"
 }
 
-# Run health checks
+# Run health checks (only host-published endpoints)
 run_health_checks() {
     print_status "Running comprehensive health checks..."
+
+    local gateway_port="${API_GATEWAY_PORT:-8080}"
+    local frontend_port="${FRONTEND_PORT:-8085}"
     
-    # Check API Gateway
-    if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+    if curl -f "http://localhost:${gateway_port}/health" > /dev/null 2>&1; then
         print_success "API Gateway health check passed"
     else
         print_error "API Gateway health check failed"
         exit 1
     fi
     
-    # Check Auth Service
-    if curl -f http://localhost:8081/health > /dev/null 2>&1; then
-        print_success "Auth Service health check passed"
-    else
-        print_error "Auth Service health check failed"
-        exit 1
-    fi
-    
-    # Check User Service
-    if curl -f http://localhost:8082/health > /dev/null 2>&1; then
-        print_success "User Service health check passed"
-    else
-        print_error "User Service health check failed"
-        exit 1
-    fi
-    
-    # Check Frontend
-    if curl -f http://localhost:8085 > /dev/null 2>&1; then
+    if curl -f "http://localhost:${frontend_port}" > /dev/null 2>&1; then
         print_success "Frontend health check passed"
     else
         print_error "Frontend health check failed"
@@ -186,24 +182,25 @@ run_health_checks() {
 
 # Display deployment information
 show_deployment_info() {
+    local gateway_port="${API_GATEWAY_PORT:-8080}"
+    local frontend_port="${FRONTEND_PORT:-8085}"
+
     print_success "Deployment completed successfully!"
     echo ""
     echo "=== Production Deployment Information ==="
-    echo "API Gateway:     http://localhost:8080"
-    echo "Swagger UI:      http://localhost:8080/swagger/"
-    echo "Auth Service:    http://localhost:8081"
-    echo "User Service:    http://localhost:8082"
-    echo "Frontend:        http://localhost:8085"
-    echo "MongoDB:         localhost:27017"
+    echo "API Gateway:     http://localhost:${gateway_port}"
+    echo "Swagger UI:      http://localhost:${gateway_port}/swagger/"
+    echo "Frontend:        http://localhost:${frontend_port}"
+    echo "Auth/User/Mongo/Kafka: internal Docker network only"
     echo ""
     echo "=== Useful Commands ==="
-    echo "View logs:       docker compose -f deploy/docker-compose.yml logs -f"
-    echo "Check status:    docker compose -f deploy/docker-compose.yml ps"
-    echo "Stop services:   docker compose -f deploy/docker-compose.yml down"
-    echo "Restart service: docker compose -f deploy/docker-compose.yml restart [service-name]"
+    echo "View logs:       docker compose -f ${COMPOSE_FILE} --env-file .env logs -f"
+    echo "Check status:    docker compose -f ${COMPOSE_FILE} --env-file .env ps"
+    echo "Stop services:   docker compose -f ${COMPOSE_FILE} --env-file .env down"
+    echo "Restart service: docker compose -f ${COMPOSE_FILE} --env-file .env restart [service-name]"
     echo ""
     echo "=== Monitoring ==="
-    echo "Monitor health:  watch docker compose -f deploy/docker-compose.yml ps"
+    echo "Monitor health:  watch docker compose -f ${COMPOSE_FILE} --env-file .env ps"
     echo "View resources:  docker stats"
 }
 
@@ -238,21 +235,27 @@ case "${1:-deploy}" in
         ;;
     "stop")
         print_status "Stopping production services..."
-        docker compose -f deploy/docker-compose.yml down
+        if [ -f .env ]; then set -a; # shellcheck disable=SC1091
+            source .env; set +a; fi
+        docker compose -f "$COMPOSE_FILE" --env-file .env down
         print_success "Services stopped"
         ;;
     "restart")
         print_status "Restarting production services..."
-        docker compose -f deploy/docker-compose.yml restart
+        if [ -f .env ]; then set -a; # shellcheck disable=SC1091
+            source .env; set +a; fi
+        docker compose -f "$COMPOSE_FILE" --env-file .env restart
         print_success "Services restarted"
         ;;
     "logs")
-        docker compose -f deploy/docker-compose.yml logs -f
+        docker compose -f "$COMPOSE_FILE" --env-file .env logs -f
         ;;
     "status")
-        docker compose -f deploy/docker-compose.yml ps
+        docker compose -f "$COMPOSE_FILE" --env-file .env ps
         ;;
     "health")
+        if [ -f .env ]; then set -a; # shellcheck disable=SC1091
+            source .env; set +a; fi
         run_health_checks
         ;;
     "help"|"-h"|"--help")
