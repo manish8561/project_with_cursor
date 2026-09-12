@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Pre-push: build frontend and backend separately when related files are in the push.
+# Skip with: SKIP_GIT_HOOKS=1 git push ...
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+if [[ "${SKIP_GIT_HOOKS:-}" == "1" ]]; then
+  echo "[pre-push] SKIP_GIT_HOOKS=1 — skipping builds"
+  exit 0
+fi
+
+# Collect commits being pushed (stdin: local_ref local_sha remote_ref remote_sha).
+changed_files=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ -z "${local_sha:-}" ]] && continue
+
+  # Deleting a remote ref — nothing to build.
+  if [[ "$local_sha" =~ ^0+$ ]]; then
+    continue
+  fi
+
+  if [[ "$remote_sha" =~ ^0+$ ]]; then
+    # New branch: compare against merge-base with default branch, or all reachable commits.
+    range="$local_sha"
+    if git rev-parse --verify origin/main >/dev/null 2>&1; then
+      range="$(git merge-base origin/main "$local_sha")..$local_sha"
+    elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+      range="$(git merge-base origin/master "$local_sha")..$local_sha"
+    fi
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+
+  files="$(git diff --name-only --diff-filter=ACMR "$range" 2>/dev/null || true)"
+  if [[ -n "$files" ]]; then
+    changed_files+="$files"$'\n'
+  fi
+done
+
+needs_frontend=0
+needs_auth=0
+needs_user=0
+needs_gateway=0
+
+while IFS= read -r file; do
+  [[ -z "$file" ]] && continue
+  case "$file" in
+    frontend/*) needs_frontend=1 ;;
+    backend/auth-service/*) needs_auth=1 ;;
+    backend/user-service/*) needs_user=1 ;;
+    backend/api-gateway/*) needs_gateway=1 ;;
+  esac
+done <<< "$changed_files"
+
+if [[ "$needs_frontend" -eq 0 && "$needs_auth" -eq 0 && "$needs_user" -eq 0 && "$needs_gateway" -eq 0 ]]; then
+  exit 0
+fi
+
+echo "[pre-push] Running builds for changes being pushed..."
+
+OUT_DIR="$(mktemp -d)"
+trap 'rm -rf "$OUT_DIR"' EXIT
+
+build_backend_service() {
+  local name="$1"
+  local pkg="$2"
+
+  echo ""
+  echo "==> Backend: building ${name}"
+  (
+    cd "${ROOT}/backend/${name}"
+    CGO_ENABLED=0 go build -o "${OUT_DIR}/${name}" "./cmd/${pkg}"
+  )
+  echo "==> Backend: ${name} OK"
+}
+
+build_frontend() {
+  echo ""
+  echo "==> Frontend: building"
+  if [[ ! -d "${ROOT}/frontend/node_modules" ]]; then
+    echo "error: frontend/node_modules missing — run: (cd frontend && npm ci)" >&2
+    exit 1
+  fi
+  (
+    cd "${ROOT}/frontend"
+    npm run build
+  )
+  echo "==> Frontend: OK"
+}
+
+# Build backend services separately.
+if [[ "$needs_auth" -eq 1 ]]; then
+  build_backend_service "auth-service" "auth-service"
+fi
+if [[ "$needs_user" -eq 1 ]]; then
+  build_backend_service "user-service" "user-service"
+fi
+if [[ "$needs_gateway" -eq 1 ]]; then
+  build_backend_service "api-gateway" "api-gateway"
+fi
+
+# Build frontend separately.
+if [[ "$needs_frontend" -eq 1 ]]; then
+  build_frontend
+fi
+
+echo ""
+echo "[pre-push] All required builds passed"
+exit 0

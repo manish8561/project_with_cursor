@@ -12,9 +12,11 @@ A full-stack application with Angular frontend and Go microservices backend.
 │   ├── api-gateway/   # API Gateway service
 │   └── README.md      # Backend documentation
 ├── frontend/          # Angular frontend
-└── deploy/           # Deployment configurations
-    ├── docker-compose.yml      # Production deployment
-    └── docker-compose.test.yml # Testing deployment
+├── deploy/                    # Deployment configurations
+│   ├── docker-compose.yml       # Local / development
+│   ├── docker-compose.prod.yml  # Production
+│   └── docker-compose.test.yml  # Testing
+└── deploy.sh                  # Production deploy helper (uses .env + prod compose)
 ```
 
 ## Prerequisites
@@ -23,9 +25,21 @@ A full-stack application with Angular frontend and Go microservices backend.
 - Node.js (for frontend development)
 - Go 1.26+ (for backend development)
 
+### Git hooks (optional)
+
+Install the pre-push hook once after cloning (builds frontend and backend separately when related files are pushed):
+
+```bash
+./.githooks/install.sh
+```
+
+Skip builds for a single push: `SKIP_GIT_HOOKS=1 git push ...`
+
 ## Quick Start
 
-### Using Docker Compose (Recommended)
+### Local environment (development)
+
+Runs the full stack with ports published for debugging (Mongo, Kafka, auth, user, gateway, frontend).
 
 1. **Start all services (backend + frontend)**:
 
@@ -39,19 +53,57 @@ A full-stack application with Angular frontend and Go microservices backend.
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
+   - Kafka: localhost:9092
+
+3. **Stop**:
+
+   ```bash
+   docker compose -f deploy/docker-compose.yml down
+   ```
 
 Notes:
 
 - The frontend proxies API calls to the gateway via `/api` (configured in `frontend/nginx.conf`).
 - Angular environments use `apiUrl: '/api'` for containerized runs.
 
-### Testing Environment
+### Production environment
+
+Uses `deploy/docker-compose.prod.yml` with secrets from a root `.env` file. Only the API gateway and frontend are published; MongoDB, Kafka, auth, and user stay on the Docker network.
+
+1. **Deploy (recommended)**:
+
+   ```bash
+   ./deploy.sh
+   ```
+
+   On first run this creates `.env` with random Mongo password and `JWT_SECRET`.
+
+2. **Or run Compose directly**:
+
+   ```bash
+   # Create .env first if it does not exist (or run ./deploy.sh once)
+   docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+   ```
+
+3. **Access**:
+   - Frontend: http://localhost:8085
+   - API Gateway: http://localhost:8080
+   - Swagger UI: http://localhost:8080/swagger/
+
+4. **Stop**:
+
+   ```bash
+   ./deploy.sh stop
+   # or
+   docker compose -f deploy/docker-compose.prod.yml --env-file .env down
+   ```
+
+### Testing environment
 
 1. **Start test environment**:
 
    ```bash
-   cd deploy
-   docker compose -f docker-compose.test.yml up --build
+   docker compose -f deploy/docker-compose.test.yml up --build
    ```
 
 2. **Access test services**:
@@ -59,6 +111,12 @@ Notes:
    - Auth Service: http://localhost:8081
    - User Service: http://localhost:8082
    - MongoDB: localhost:27017
+
+3. **Stop**:
+
+   ```bash
+   docker compose -f deploy/docker-compose.test.yml down
+   ```
 
 ## API Documentation
 
@@ -383,10 +441,11 @@ A comprehensive production deployment script is available to automate the deploy
 ### Features
 
 - **Environment Setup**: Automatically generates secure secrets and creates `.env` file
+- **Compose file**: Deploys with `deploy/docker-compose.prod.yml`
 - **Dependency Checks**: Validates Docker and Docker Compose installation
 - **Backup System**: Creates backups of existing data before deployment
 - **Health Monitoring**: Waits for services to become healthy with timeout
-- **Comprehensive Health Checks**: Tests all endpoints after deployment
+- **Health Checks**: Verifies published gateway and frontend endpoints after deployment
 - **Graceful Error Handling**: Proper error handling and cleanup
 
 ### Deployment Information
@@ -397,25 +456,23 @@ After successful deployment, the script will display:
 === Production Deployment Information ===
 API Gateway:     http://localhost:8080
 Swagger UI:      http://localhost:8080/swagger/
-Auth Service:    http://localhost:8081
-User Service:    http://localhost:8082
 Frontend:        http://localhost:8085
-MongoDB:         localhost:27017
+Auth/User/Mongo/Kafka: internal Docker network only
 
 === Useful Commands ===
-View logs:       docker-compose -f deploy/docker-compose.yml logs -f
-Check status:    docker-compose -f deploy/docker-compose.yml ps
-Stop services:   docker-compose -f deploy/docker-compose.yml down
-Restart service: docker-compose -f deploy/docker-compose.yml restart [service-name]
+View logs:       docker compose -f deploy/docker-compose.prod.yml --env-file .env logs -f
+Check status:    docker compose -f deploy/docker-compose.prod.yml --env-file .env ps
+Stop services:   docker compose -f deploy/docker-compose.prod.yml --env-file .env down
+Restart service: docker compose -f deploy/docker-compose.prod.yml --env-file .env restart [service-name]
 
 === Monitoring ===
-Monitor health:  watch docker-compose -f deploy/docker-compose.yml ps
+Monitor health:  watch docker compose -f deploy/docker-compose.prod.yml --env-file .env ps
 View resources:  docker stats
 ```
 
 ## Docker Commands
 
-### Production
+### Local
 
 ```bash
 # Start all services (detached)
@@ -434,18 +491,36 @@ docker compose -f deploy/docker-compose.yml logs api-gateway
 docker compose -f deploy/docker-compose.yml logs frontend
 ```
 
+### Production
+
+```bash
+# Start (requires .env at repo root — created by ./deploy.sh)
+docker compose -f deploy/docker-compose.prod.yml --env-file .env up -d --build
+
+# Stop services
+docker compose -f deploy/docker-compose.prod.yml --env-file .env down
+
+# View logs
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs
+
+# View specific service logs
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs auth-service
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs user-service
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs api-gateway
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs frontend
+```
+
 ### Testing
 
 ```bash
 # Start test environment
-cd deploy
-docker compose -f docker-compose.test.yml up --build
+docker compose -f deploy/docker-compose.test.yml up --build
 
 # Stop test services
-docker compose -f docker-compose.test.yml down
+docker compose -f deploy/docker-compose.test.yml down
 
 # View test logs
-docker compose -f docker-compose.test.yml logs
+docker compose -f deploy/docker-compose.test.yml logs
 ```
 
 ### Individual Services
@@ -465,22 +540,29 @@ docker run -p 8080:8080 api-gateway
 ## Health Checks
 
 ```bash
-# Check service health
+# Local / test (services published to host)
 curl http://localhost:8080/health  # API Gateway
 curl http://localhost:8081/health  # Auth Service
 curl http://localhost:8082/health  # User Service
+
+# Production (only gateway + frontend are published)
+curl http://localhost:8080/health
+curl http://localhost:8085
+./deploy.sh health
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Port conflicts**: Ensure ports 8080, 8081, 8082, 8085, and 27017 are available
-2. **MongoDB connection**: Check if MongoDB is running and accessible
-3. **Service communication**: Verify service URLs in API Gateway configuration
-4. **Authentication errors**: Check `JWT_SECRET` matches across auth-service and user-service; verify cookies are sent (`withCredentials: true` in browser, `-b` in curl)
+1. **Port conflicts (local/test)**: Ensure ports 8080, 8081, 8082, 8085, 27017, and 9092 are available
+2. **Port conflicts (prod)**: Ensure ports 8080 and 8085 are available (Mongo/Kafka/auth/user are not host-published)
+3. **MongoDB connection**: Check if MongoDB is running and accessible; for prod, confirm `.env` credentials match the volume
+4. **Service communication**: Verify service URLs in API Gateway configuration
+5. **Authentication errors**: Check `JWT_SECRET` matches across auth-service and user-service; verify cookies are sent (`withCredentials: true` in browser, `-b` in curl)
+6. **Missing `.env` (prod)**: Run `./deploy.sh` once, or create `.env` from the Production Environment section below
 
-5. **Image pull/DNS errors**: If you see errors like `server misbehaving` when pulling base images, try:
+7. **Image pull/DNS errors**: If you see errors like `server misbehaving` when pulling base images, try:
    ```bash
    sudo systemctl restart systemd-resolved
    docker system prune -f
@@ -490,57 +572,47 @@ curl http://localhost:8082/health  # User Service
 ### Logs and Debugging
 
 ```bash
-# View all service logs
-docker compose logs
+# Local
+docker compose -f deploy/docker-compose.yml logs -f
 
-# View specific service logs
-docker compose logs auth-service
-docker compose logs user-service
-docker compose logs api-gateway
+# Production
+docker compose -f deploy/docker-compose.prod.yml --env-file .env logs -f
+# or
+./deploy.sh logs
 
-# Follow logs in real-time
-docker compose logs -f
+# Testing
+docker compose -f deploy/docker-compose.test.yml logs -f
 ```
 
 ## Environment Variables
 
-### Production Environment
+### Production (`.env` at repo root)
+
+Used by `deploy/docker-compose.prod.yml` and `./deploy.sh`. Generated automatically on first deploy:
 
 ```bash
-# MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=password
+MONGO_INITDB_ROOT_PASSWORD=<random-hex>
 MONGO_INITDB_DATABASE=auth_db
-
-# Auth Service
-PORT=8081
-MONGO_URI=mongodb://admin:password@mongodb:27017
-MONGO_DB=auth_db
-JWT_SECRET=your-super-secret-jwt-key
+JWT_SECRET=<random-hex>
+LOG_LEVEL=0
+API_GATEWAY_PORT=8080
+FRONTEND_PORT=8085
+# Set COOKIE_SECURE=true and COOKIE_SAME_SITE=None when serving over HTTPS
 COOKIE_SECURE=false
 COOKIE_SAME_SITE=Lax
-ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
+ALLOWED_ORIGINS=http://localhost:8085
+```
 
-# User Service
-PORT=8082
-MONGO_URI=mongodb://admin:password@mongodb:27017
-MONGO_DB=user_db
-JWT_SECRET=your-super-secret-jwt-key
-ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
-KAFKA_CLIENT_ID=user-service
-KAFKA_GROUP_ID=user-service-group
+Inside the compose stack, services also use:
 
-# API Gateway
-PORT=8080
-AUTH_SERVICE_URL=http://auth-service:8081
-USER_SERVICE_URL=http://user-service:8082
-
-# Kafka
+```bash
+# Wired from .env by docker-compose.prod.yml
+MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb:27017
+MONGO_DB=auth_db   # auth-service
+MONGO_DB=user_db   # user-service
+GIN_MODE=release
 KAFKA_BROKERS=kafka:9092
-KAFKA_CLIENT_ID=auth-service
-KAFKA_TOPIC_USER_CREATED=user.created.v1
-KAFKA_TOPIC_USER_UPDATED=user.updated.v1
-KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ```
 
 ### Test Environment
@@ -587,7 +659,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Event-Driven Communication**: Kafka-based async messaging between services
 - **Structured Logging**: Zap-based JSON logging across all services
 - **Docker Support**: Complete containerization for all services
-- **Testing Environment**: Separate test configuration
+- **Local / Prod / Test Environments**: Separate Docker Compose files for each environment
 - **Health Checks**: Service health monitoring
 - **CORS Support**: Cross-origin resource sharing
 - **Protected Routes**: Authentication-based route protection
