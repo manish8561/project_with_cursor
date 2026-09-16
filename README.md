@@ -665,24 +665,28 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Protected Routes**: Authentication-based route protection
 - **Centralized API Documentation**: Swagger/OpenAPI documentation
 
-## Future Enhancements
+### Verified Achievements
 
-1. **Service Discovery**: Implement service discovery (Consul, etcd)
-2. **Load Balancing**: Add load balancers for each service
-3. **Circuit Breakers**: Implement circuit breakers for service communication
-4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
-5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
-6. **Message Queues**: ✅ **COMPLETED** - Kafka integration for async communication
-7. **Structured Logging**: ✅ **COMPLETED** - Zap-based JSON logging
-8. **API Documentation**: ✅ **COMPLETED** - Swagger/OpenAPI documentation
-9. **Testing**: Add comprehensive test suites for each service
+- **Backend Build Validation**: Auth Service, User Service, and API Gateway compile successfully.
+- **Frontend Production Build**: Angular production bundle builds successfully.
+- **Deployment Configuration Validation**: Local and test Docker Compose configurations are valid.
+- **Production Configuration Validation**: Production Docker Compose configuration is valid when supplied with the required environment variables.
+- **Kafka Integration**: User lifecycle events are configured for asynchronous service communication.
+- **MongoDB Integration**: Auth and user data use service-owned MongoDB databases.
+- **Docker Containerization**: Backend services and the frontend have dedicated container images.
+- **Cookie-Based Authentication**: Authentication uses an HttpOnly `access_token` cookie with protected routes.
+- **API Gateway**: Centralized routing connects clients to the backend services.
+- **Auth and User Services**: Authentication and user profile management are implemented as separate services.
+- **Message Queues**: Kafka integration for async communication
+- **Structured Logging**: Zap-based JSON logging
+- **API Documentation**: Swagger/OpenAPI documentation
 
 ## Documentation
 
 - [Backend README](backend/README.md) - Detailed backend documentation
 - [Frontend README](frontend/README.md) - Frontend-specific instructions
 
-## Future Implementations
+## Future Implementations and Enhancements
 
 - **Upgrade versions for backend, db, frontend**
 
@@ -698,3 +702,17 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Quality and reliability**
   - Expand automated test coverage (unit, integration, and API contract tests).
   - Add CI checks for build, lint, test, and image validation.
+- **Notification Service**
+  - For sending email, sms, push notifications, whatsapp, etc. as per need
+  - Separate service with no link api gateway
+
+1. **Service Discovery**: Implement service discovery (Consul, etcd)
+2. **Load Balancing**: Add load balancers for each service
+3. **Circuit Breakers**: Implement circuit breakers for service communication
+4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
+5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
+6. **Testing**: Add comprehensive test suites for each service
+
+## Next Steps for development
+
+- Rate Limiting
