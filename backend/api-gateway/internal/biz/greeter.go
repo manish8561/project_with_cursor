@@ -34,6 +34,11 @@ type GreeterUsecase struct {
 	log  *log.Helper
 }
 
+// GreeterUsecaseInterface defines the contract for greeter usecase operations
+type GreeterUsecaseInterface interface {
+	CreateGreeter(ctx context.Context, g *Greeter) (*Greeter, error)
+}
+
 // NewGreeterUsecase new a Greeter usecase.
 func NewGreeterUsecase(repo GreeterRepo, logger log.Logger) *GreeterUsecase {
 	return &GreeterUsecase{repo: repo, log: log.NewHelper(logger)}

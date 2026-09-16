@@ -73,10 +73,11 @@ func (s *UserService) ListUsers(page, pageSize int) (*models.UserListResponse, e
 	}
 
 	return &models.UserListResponse{
-		Users: users,
-		Total: total,
-		Page:  page,
-		Size:  pageSize,
+		Users:      users,
+		Total:      total,
+		TotalCount: total,
+		Page:       page,
+		Size:       pageSize,
 	}, nil
 }
 
@@ -186,4 +187,43 @@ func (s *UserService) DeleteUserProfileFromEvent(event models.UserEvent) error {
 
 	_, err := collection.DeleteOne(ctx, bson.M{"_id": event.UserID})
 	return err
+}
+
+// CreateUser creates a new user
+func (s *UserService) CreateUser(req models.CreateUserRequest) (*models.User, error) {
+	collection := s.mongoConfig.GetCollection("user_profiles")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	user := models.User{
+		ID:        primitive.NewObjectID().Hex(),
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  req.Password,
+		Role:      req.Role,
+		Status:    "active",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	_, err := collection.InsertOne(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	event := models.UserEvent{
+		EventID:   primitive.NewObjectID().Hex(),
+		EventType: "user.created.v1",
+		Timestamp: time.Now().UTC(),
+		UserID:    user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		Status:    user.Status,
+		Role:      user.Role,
+	}
+	if err := s.publisher.PublishUserCreated(ctx, event); err != nil {
+		// Keep API behavior successful even if async event publishing fails.
+	}
+
+	return &user, nil
 }

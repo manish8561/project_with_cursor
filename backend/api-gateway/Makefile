@@ -55,6 +55,28 @@ generate:
 	go generate ./...
 	go mod tidy
 
+.PHONY: test
+# run tests
+test:
+	go test -v -race -coverprofile=coverage.out ./...
+
+.PHONY: test-coverage
+# run tests with coverage
+test-coverage:
+	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+.PHONY: lint
+# run linter
+lint:
+	golangci-lint run
+
+.PHONY: clean
+# clean build artifacts
+clean:
+	rm -rf bin/
+	rm -f coverage.out coverage.html
+
 .PHONY: all
 # generate all
 all:

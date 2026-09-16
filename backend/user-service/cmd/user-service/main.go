@@ -8,13 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 	"user-service/internal/config"
 	"user-service/internal/handlers"
 	"user-service/internal/logger"
 	"user-service/internal/middleware"
 	"user-service/internal/services"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -63,7 +64,8 @@ func main() {
 
 	// Initialize services
 	userService := services.NewUserService(mongoConfig, publisher)
-	userHandler := handlers.NewUserHandler(userService, log)
+	var userServiceInterface services.UserServiceInterface = userService
+	userHandler := handlers.NewUserHandler(userServiceInterface, log)
 	log.Info("User service and handlers initialized")
 
 	// Initialize Kafka consumer for user lifecycle events.

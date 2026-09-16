@@ -16,10 +16,11 @@ type User struct {
 
 // UserListResponse represents a paginated list of users
 type UserListResponse struct {
-	Users []User `json:"users"`
-	Total int64  `json:"total"`
-	Page  int    `json:"page"`
-	Size  int    `json:"size"`
+	Users      []User `json:"users"`
+	Total      int64  `json:"total"`
+	TotalCount int64  `json:"totalCount"`
+	Page       int    `json:"page"`
+	Size       int    `json:"size"`
 }
 
 // UpdateUserRequest represents a user update request
@@ -27,4 +28,12 @@ type UpdateUserRequest struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  string `json:"role"`
+}
+
+// CreateUserRequest represents a user creation request
+type CreateUserRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
 }
