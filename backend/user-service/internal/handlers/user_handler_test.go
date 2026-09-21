@@ -77,7 +77,7 @@ func setupTestRouter(mockUserService *MockUserService) *gin.Engine {
 	logger, _ := zap.NewDevelopment()
 	userHandler := handlers.NewUserHandler(mockUserService, logger)
 
-	// Add middleware to set user ID context for testing
+	// Add middleware to set user ID context for testing (bypass auth)
 	r.Use(func(c *gin.Context) {
 		c.Set(middleware.ContextUserIDKey, "123")
 		c.Next()
@@ -97,7 +97,7 @@ func setupTestRouter(mockUserService *MockUserService) *gin.Engine {
 
 func TestGetCurrentUser_Success(t *testing.T) {
 	mockUserService := new(MockUserService)
-	router := setupTestRouter(mockUserService)
+	r := setupTestRouter(mockUserService)
 
 	expectedUser := &models.User{
 		ID:    "123",
@@ -110,7 +110,7 @@ func TestGetCurrentUser_Success(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/users/me", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockUserService.AssertExpectations(t)
@@ -118,7 +118,7 @@ func TestGetCurrentUser_Success(t *testing.T) {
 
 func TestGetUserByID_Success(t *testing.T) {
 	mockUserService := new(MockUserService)
-	router := setupTestRouter(mockUserService)
+	r := setupTestRouter(mockUserService)
 
 	expectedUser := &models.User{
 		ID:    "123",
@@ -131,7 +131,7 @@ func TestGetUserByID_Success(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/users/profile/123", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -145,7 +145,7 @@ func TestGetUserByID_Success(t *testing.T) {
 
 func TestUpdateUser_Success(t *testing.T) {
 	mockUserService := new(MockUserService)
-	router := setupTestRouter(mockUserService)
+	r := setupTestRouter(mockUserService)
 
 	updateReq := models.UpdateUserRequest{
 		Name:  "updateduser",
@@ -165,7 +165,7 @@ func TestUpdateUser_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -179,14 +179,14 @@ func TestUpdateUser_Success(t *testing.T) {
 
 func TestDeleteUser_Success(t *testing.T) {
 	mockUserService := new(MockUserService)
-	router := setupTestRouter(mockUserService)
+	r := setupTestRouter(mockUserService)
 
 	mockUserService.On("DeleteUser", "123").Return(nil)
 
 	req, _ := http.NewRequest("DELETE", "/api/users/profile/123", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockUserService.AssertExpectations(t)
@@ -194,7 +194,7 @@ func TestDeleteUser_Success(t *testing.T) {
 
 func TestListUsers_Success(t *testing.T) {
 	mockUserService := new(MockUserService)
-	router := setupTestRouter(mockUserService)
+	r := setupTestRouter(mockUserService)
 
 	expectedResponse := &models.UserListResponse{
 		Users: []models.User{
@@ -212,7 +212,7 @@ func TestListUsers_Success(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/users/list?page=1&size=10", nil)
 	w := httptest.NewRecorder()
 
-	router.ServeHTTP(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 

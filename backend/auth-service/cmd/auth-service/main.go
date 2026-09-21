@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,10 +9,9 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/handlers"
 	"auth-service/internal/logger"
-	"auth-service/internal/middleware"
+	"auth-service/internal/router"
 	"auth-service/internal/services"
 
-	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -74,7 +72,7 @@ func main() {
 	log.Info("Auth service and handlers initialized")
 
 	// Setup routes using the router
-	r := SetupRoutes(authHandler, log, cfg.AllowedOrigins)
+	r := router.NewRouter(authHandler, log, cfg.AllowedOrigins)
 
 	// Start the server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
@@ -92,57 +90,4 @@ func main() {
 
 	<-quit
 	log.Info("Shutting down auth service...")
-}
-
-// EnableCORS enables credentialed CORS for allowed origins.
-func EnableCORS(allowedOrigins []string) gin.HandlerFunc {
-	allowed := make(map[string]struct{}, len(allowedOrigins))
-	for _, origin := range allowedOrigins {
-		allowed[origin] = struct{}{}
-	}
-
-	return func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		if origin != "" {
-			if _, ok := allowed[origin]; ok {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-				c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-				c.Writer.Header().Set("Vary", "Origin")
-			}
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// SetupRoutes configures all routes for the auth service
-func SetupRoutes(authHandler *handlers.AuthHandler, log logger.Logger, allowedOrigins []string) *gin.Engine {
-	r := gin.Default()
-
-	r.Use(EnableCORS(allowedOrigins))
-	r.Use(middleware.ZapMiddleware(log))
-
-	api := r.Group("/api/auth")
-	{
-		api.POST("/login", authHandler.Login)
-		api.POST("/register", authHandler.Register)
-		api.POST("/validate", authHandler.ValidateToken)
-		api.POST("/refresh", authHandler.RefreshToken)
-		api.GET("/me", authHandler.Me)
-		api.POST("/logout", authHandler.Logout)
-	}
-
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "healthy", "service": "auth-service"})
-	})
-
-	return r
 }

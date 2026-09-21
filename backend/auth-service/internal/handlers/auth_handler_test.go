@@ -10,6 +10,7 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/handlers"
 	"auth-service/internal/models"
+	authrouter "auth-service/internal/router"
 	"auth-service/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -25,39 +26,33 @@ func setupAuthRouter(t *testing.T) (*gin.Engine, *config.CookieConfig, *services
 	authService := services.NewAuthService(nil, jwtService, nil)
 	handler := handlers.NewAuthHandler(authService, zap.NewNop(), cookieConfig)
 
-	router := gin.New()
-	router.POST("/login", handler.Login)
-	router.POST("/register", handler.Register)
-	router.POST("/validate", handler.ValidateToken)
-	router.POST("/refresh", handler.RefreshToken)
-	router.GET("/me", handler.Me)
-	router.POST("/logout", handler.Logout)
-	return router, cookieConfig, jwtService
+	r := authrouter.NewRouter(handler, zap.NewNop(), []string{"http://localhost:3000"})
+	return r, cookieConfig, jwtService
 }
 
 func TestAuthHandlerRejectsMalformedCredentials(t *testing.T) {
-	router, _, _ := setupAuthRouter(t)
+	r, _, _ := setupAuthRouter(t)
 
-	for _, path := range []string{"/login", "/register"} {
+	for _, path := range []string{"/api/auth/login", "/api/auth/register"} {
 		req := httptest.NewRequest(http.MethodPost, path, bytes.NewBufferString(`{"email":"not-an-email"}`))
 		req.Header.Set("Content-Type", "application/json")
 		response := httptest.NewRecorder()
 
-		router.ServeHTTP(response, req)
+		r.ServeHTTP(response, req)
 
 		assert.Equal(t, http.StatusBadRequest, response.Code, path)
 	}
 }
 
 func TestAuthHandlerValidateToken(t *testing.T) {
-	router, _, jwtService := setupAuthRouter(t)
+	r, _, jwtService := setupAuthRouter(t)
 	token, err := jwtService.GenerateToken("user-123")
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/validate", bytes.NewBufferString(`{"token":"`+token+`"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/validate", bytes.NewBufferString(`{"token":"`+token+`"}`))
 	req.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, req)
+	r.ServeHTTP(response, req)
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	var body models.TokenValidationResponse
@@ -67,23 +62,23 @@ func TestAuthHandlerValidateToken(t *testing.T) {
 }
 
 func TestAuthHandlerValidateTokenRequiresToken(t *testing.T) {
-	router, _, _ := setupAuthRouter(t)
+	r, _, _ := setupAuthRouter(t)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/validate", nil))
+	r.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/auth/validate", nil))
 
 	assert.Equal(t, http.StatusBadRequest, response.Code)
 	assert.JSONEq(t, `{"error":"token is required"}`, response.Body.String())
 }
 
 func TestAuthHandlerRefreshTokenFromAuthorizationHeader(t *testing.T) {
-	router, cookieConfig, jwtService := setupAuthRouter(t)
+	r, cookieConfig, jwtService := setupAuthRouter(t)
 	token, err := jwtService.GenerateToken("user-123")
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, req)
+	r.ServeHTTP(response, req)
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	assert.Contains(t, response.Header().Get("Set-Cookie"), cookieConfig.Name+"=")
@@ -91,64 +86,64 @@ func TestAuthHandlerRefreshTokenFromAuthorizationHeader(t *testing.T) {
 }
 
 func TestAuthHandlerRefreshTokenRejectsMissingOrInvalidToken(t *testing.T) {
-	router, _, _ := setupAuthRouter(t)
+	r, _, _ := setupAuthRouter(t)
 
 	for _, request := range []*http.Request{
-		httptest.NewRequest(http.MethodPost, "/refresh", nil),
-		httptest.NewRequest(http.MethodPost, "/refresh", bytes.NewBufferString(`{"token":"invalid"}`)),
+		httptest.NewRequest(http.MethodPost, "/api/auth/refresh", nil),
+		httptest.NewRequest(http.MethodPost, "/api/auth/refresh", bytes.NewBufferString(`{"token":"invalid"}`)),
 	} {
 		if request.Body != nil {
 			request.Header.Set("Content-Type", "application/json")
 		}
 		response := httptest.NewRecorder()
-		router.ServeHTTP(response, request)
+		r.ServeHTTP(response, request)
 		assert.Equal(t, http.StatusUnauthorized, response.Code)
 	}
 }
 
 func TestAuthHandlerMeUsesCookieBeforeOtherTokenSources(t *testing.T) {
-	router, cookieConfig, jwtService := setupAuthRouter(t)
+	r, cookieConfig, jwtService := setupAuthRouter(t)
 	cookieToken, err := jwtService.GenerateToken("cookie-user")
 	assert.NoError(t, err)
 	headerToken, err := jwtService.GenerateToken("header-user")
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
 	req.AddCookie(&http.Cookie{Name: cookieConfig.Name, Value: cookieToken})
 	req.Header.Set("Authorization", "Bearer "+headerToken)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, req)
+	r.ServeHTTP(response, req)
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	assert.JSONEq(t, `{"status":"success","user_id":"cookie-user"}`, response.Body.String())
 }
 
 func TestAuthHandlerMeRejectsMissingOrInvalidToken(t *testing.T) {
-	router, _, _ := setupAuthRouter(t)
+	r, _, _ := setupAuthRouter(t)
 
 	for _, testCase := range []struct {
 		name    string
 		request *http.Request
 	}{
-		{name: "missing token", request: httptest.NewRequest(http.MethodGet, "/me", nil)},
+		{name: "missing token", request: httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)},
 		{name: "invalid token", request: func() *http.Request {
-			req := httptest.NewRequest(http.MethodGet, "/me", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
 			req.Header.Set("Authorization", "Bearer invalid")
 			return req
 		}()},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			response := httptest.NewRecorder()
-			router.ServeHTTP(response, testCase.request)
+			r.ServeHTTP(response, testCase.request)
 			assert.Equal(t, http.StatusUnauthorized, response.Code)
 		})
 	}
 }
 
 func TestAuthHandlerLogoutClearsCookie(t *testing.T) {
-	router, cookieConfig, _ := setupAuthRouter(t)
+	r, cookieConfig, _ := setupAuthRouter(t)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/logout", nil))
+	r.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil))
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	assert.Contains(t, response.Header().Get("Set-Cookie"), cookieConfig.Name+"=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax")
