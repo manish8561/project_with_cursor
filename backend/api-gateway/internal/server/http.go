@@ -6,9 +6,11 @@ import (
 	"api-gateway/internal/service"
 
 	"io"
+	"net"
 	nethttp "net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,9 +27,11 @@ type simpleTokenBucketLimiter struct {
 	buckets map[string]*tokenBucket
 }
 
+const maxLimiterBuckets = 10000
+
 type tokenBucket struct {
-	tokens        float64
-	lastRefillUTC time.Time
+	tokens   float64
+	lastUsed time.Time
 }
 
 func newLimiter(rps float64, burst int) *simpleTokenBucketLimiter {
@@ -47,18 +51,34 @@ func (l *simpleTokenBucketLimiter) allow(ip string) bool {
 	defer l.mu.Unlock()
 	b, ok := l.buckets[ip]
 	if !ok {
-		l.buckets[ip] = &tokenBucket{tokens: float64(l.burst - 1), lastRefillUTC: now}
+		if len(l.buckets) >= maxLimiterBuckets {
+			l.evictOldest()
+		}
+		l.buckets[ip] = &tokenBucket{tokens: float64(l.burst - 1), lastUsed: now}
 		return true
 	}
-	// Refill tokens based on elapsed time
-	elapsed := now.Sub(b.lastRefillUTC).Seconds()
+	elapsed := now.Sub(b.lastUsed).Seconds()
 	b.tokens = minFloat(float64(l.burst), b.tokens+elapsed*l.rps)
-	b.lastRefillUTC = now
+	b.lastUsed = now
 	if b.tokens >= 1 {
 		b.tokens -= 1
 		return true
 	}
 	return false
+}
+
+func (l *simpleTokenBucketLimiter) evictOldest() {
+	var oldestIP string
+	var oldest time.Time
+	for ip, bucket := range l.buckets {
+		if oldestIP == "" || bucket.lastUsed.Before(oldest) {
+			oldestIP = ip
+			oldest = bucket.lastUsed
+		}
+	}
+	if oldestIP != "" {
+		delete(l.buckets, oldestIP)
+	}
 }
 
 func minFloat(a, b float64) float64 {
@@ -84,7 +104,7 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	if c.Http.Timeout != nil {
 		opts = append(opts, kratoshttp.Timeout(c.Http.Timeout.AsDuration()))
 	}
-	// Configure rate limiter via env vars (defaults: 10 rps, burst 20)
+	// Configure rate limiter via env vars (defaults: 10 rps, burst 20).
 	rps := 10.0
 	burst := 20
 	if v := os.Getenv("RATE_LIMIT_RPS"); v != "" {
@@ -168,8 +188,7 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	// Proxy /api/auth/* to auth-service
 	srv.HandlePrefix("/api/auth/", nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		if !limiter.allow(clientIP(r)) {
-			w.WriteHeader(nethttp.StatusTooManyRequests)
-			w.Write([]byte("rate limit exceeded"))
+			writeRateLimitResponse(w, rps)
 			return
 		}
 		target := "http://auth-service:8081" + r.URL.Path
@@ -195,8 +214,7 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	// Proxy /api/users/* to user-service
 	srv.HandlePrefix("/api/users/", nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
 		if !limiter.allow(clientIP(r)) {
-			w.WriteHeader(nethttp.StatusTooManyRequests)
-			w.Write([]byte("rate limit exceeded"))
+			writeRateLimitResponse(w, rps)
 			return
 		}
 		target := "http://user-service:8082" + r.URL.Path
@@ -222,24 +240,31 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 	return srv
 }
 
-// clientIP extracts the best-effort client IP from request headers or remote addr.
+func writeRateLimitResponse(w nethttp.ResponseWriter, rps float64) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if rps > 0 {
+		retryAfter := int((1 / rps) + 0.999999)
+		if retryAfter < 1 {
+			retryAfter = 1
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+	}
+	w.WriteHeader(nethttp.StatusTooManyRequests)
+	_, _ = w.Write([]byte("rate limit exceeded"))
+}
+
+// clientIP extracts the first forwarded client IP, falling back to the peer address.
 func clientIP(r *nethttp.Request) string {
-	if ip := r.Header.Get("X-Forwarded-For"); ip != "" {
-		for i := 0; i < len(ip); i++ {
-			if ip[i] == ',' {
-				return ip[:i]
-			}
-		}
-		return ip
-	}
-	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	host := r.RemoteAddr
-	for i := len(host) - 1; i >= 0; i-- {
-		if host[i] == ':' {
-			return host[:i]
+	for _, forwarded := range strings.Split(r.Header.Get("X-Forwarded-For"), ",") {
+		if ip := strings.TrimSpace(forwarded); ip != "" {
+			return ip
 		}
 	}
-	return host
+	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
+		return ip
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }

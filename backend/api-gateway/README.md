@@ -107,10 +107,18 @@ USER_SERVICE_URL=http://user-service:8082
 # Logging
 LOG_LEVEL=info  # debug, info, warn, error
 
+# Rate limiting (per client IP, applied to /api/auth/* and /api/users/*)
+RATE_LIMIT_RPS=10      # Token refill rate; <= 0 disables limiting
+RATE_LIMIT_BURST=20    # Maximum burst size; <= 0 disables limiting
+
 # Optional: Service identification
 SERVICE_NAME=api-gateway
 SERVICE_VERSION=v1.0.0
 ```
+
+Requests over the configured limit receive `429 Too Many Requests`, a
+`Retry-After` header, and the response body `rate limit exceeded`. The limiter
+is held in gateway memory, so each gateway replica has its own limit.
 
 ## Development
 
