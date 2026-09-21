@@ -6,7 +6,6 @@ import (
 	"auth-service/internal/handlers"
 	"auth-service/internal/logger"
 	"auth-service/internal/middleware"
-	sharedmiddleware "shared/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +14,7 @@ import (
 func NewRouter(authHandler *handlers.AuthHandler, log logger.Logger, allowedOrigins []string) *gin.Engine {
 	r := gin.Default()
 
-	r.Use(sharedmiddleware.EnableCORS(allowedOrigins))
+	r.Use(middleware.EnableCORS(allowedOrigins))
 	r.Use(middleware.ZapMiddleware(log))
 
 	api := r.Group("/api/auth")

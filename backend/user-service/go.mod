@@ -9,10 +9,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.mongodb.org/mongo-driver v1.17.3
 	go.uber.org/zap v1.26.0
-	shared v0.0.0
 )
-
-replace shared => ../shared
 
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect

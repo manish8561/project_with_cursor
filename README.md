@@ -681,6 +681,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Structured Logging**: Zap-based JSON logging
 - **API Documentation**: Swagger/OpenAPI documentation
 
+- Implement rate limiting in the API Gateway and service-level middleware.
 ## Documentation
 
 - [Backend README](backend/README.md) - Detailed backend documentation
@@ -691,7 +692,7 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Upgrade versions for backend, db, frontend**
 
 - **Backend hardening**
-  - Implement rate limiting in the API Gateway and service-level middleware.
+
   - Refactor route definitions into dedicated router modules in Go services.
 - **Observability**
   - Add `trace_id` propagation across API Gateway, Auth Service, and User Service.
