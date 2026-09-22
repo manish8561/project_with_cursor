@@ -680,8 +680,9 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Message Queues**: Kafka integration for async communication
 - **Structured Logging**: Zap-based JSON logging
 - **API Documentation**: Swagger/OpenAPI documentation
+- **Backend Hardening**: Implement rate limiting in the API Gateway and service-level middleware.
+- **Backend Hardening**: Refactor route definitions into dedicated router modules in Go services.
 
-- Implement rate limiting in the API Gateway and service-level middleware.
 ## Documentation
 
 - [Backend README](backend/README.md) - Detailed backend documentation
@@ -690,10 +691,6 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 ## Future Implementations and Enhancements
 
 - **Upgrade versions for backend, db, frontend**
-
-- **Backend hardening**
-
-  - Refactor route definitions into dedicated router modules in Go services.
 - **Observability**
   - Add `trace_id` propagation across API Gateway, Auth Service, and User Service.
   - Integrate OpenTelemetry for distributed tracing and metrics collection.

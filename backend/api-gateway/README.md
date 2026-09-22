@@ -123,7 +123,7 @@ is held in gateway memory, so each gateway replica has its own limit.
 ## Development
 
 ### Prerequisites
-- Go 1.21 or later
+- Go 1.26 or later
 - Docker (optional)
 
 ### Running Locally

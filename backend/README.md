@@ -97,7 +97,7 @@ backend/
 
 ### Prerequisites
 - Docker and Docker Compose
-- Go 1.21 or later (for local development)
+- Go 1.26 or later (for local development)
 
 ### Running the Services
 

@@ -1,8 +1,6 @@
 module api-gateway
 
-go 1.21
-
-toolchain go1.22.6
+go 1.26
 
 require (
 	github.com/go-kratos/kratos/v2 v2.8.0
