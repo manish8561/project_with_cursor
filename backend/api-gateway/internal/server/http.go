@@ -13,6 +13,13 @@ import (
 
 // NewHTTPServer new an HTTP server.
 func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.Logger) *kratoshttp.Server {
+	if c == nil {
+		c = &conf.Server{}
+	}
+	if c.Http == nil {
+		c.Http = &conf.Server_HTTP{}
+	}
+
 	var opts = []kratoshttp.ServerOption{
 		kratoshttp.Middleware(
 			recovery.Recovery(),

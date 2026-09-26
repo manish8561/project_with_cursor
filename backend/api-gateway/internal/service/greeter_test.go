@@ -59,3 +59,19 @@ func TestGreeterService_SayHello_EmptyName(t *testing.T) {
 	assert.Equal(t, "Hello ", response.Message)
 	mockUsecase.AssertExpectations(t)
 }
+
+func TestGreeterService_SayHello_UsecaseError(t *testing.T) {
+	mockUsecase := new(MockGreeterUsecase)
+	greeterService := NewGreeterService(mockUsecase)
+
+	ctx := context.Background()
+	request := &v1.HelloRequest{Name: "World"}
+
+	mockUsecase.On("CreateGreeter", ctx, mock.AnythingOfType("*biz.Greeter")).Return(nil, assert.AnError)
+
+	response, err := greeterService.SayHello(ctx, request)
+
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	mockUsecase.AssertExpectations(t)
+}

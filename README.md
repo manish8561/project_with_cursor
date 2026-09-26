@@ -710,7 +710,3 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
 5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
 6. **Testing**: Add comprehensive test suites for each service
-
-## Next Steps for development
-
-- Rate Limiting

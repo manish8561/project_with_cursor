@@ -86,3 +86,32 @@ func TestCookieAuthRejectsInvalidRequests(t *testing.T) {
 		})
 	}
 }
+
+func TestCookieAuthUsesCookieBeforeAuthorizationHeader(t *testing.T) {
+	const secret = "test-secret"
+	router := authRouter(secret)
+	cookieToken := signedToken(t, secret, jwt.MapClaims{"user_id": "cookie-user", "exp": time.Now().Add(time.Hour).Unix()})
+	headerToken := signedToken(t, secret, jwt.MapClaims{"user_id": "header-user", "exp": time.Now().Add(time.Hour).Unix()})
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.AddCookie(&http.Cookie{Name: AccessTokenCookieName, Value: cookieToken})
+	req.Header.Set("Authorization", "Bearer "+headerToken)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.JSONEq(t, `{"user_id":"cookie-user"}`, response.Body.String())
+}
+
+func TestCookieAuthRejectsMalformedAuthorizationHeader(t *testing.T) {
+	const secret = "test-secret"
+	router := authRouter(secret)
+
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req.Header.Set("Authorization", "Token not-a-bearer")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	assert.Equal(t, http.StatusUnauthorized, response.Code)
+	assert.JSONEq(t, `{"error":"authorization token is required"}`, response.Body.String())
+}

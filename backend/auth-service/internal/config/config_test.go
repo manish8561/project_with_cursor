@@ -39,3 +39,79 @@ func TestConfigHelpers(t *testing.T) {
 	assert.Equal(t, 1, parseIntEnv("invalid", 1))
 	assert.Equal(t, []string{"https://one.test", "https://two.test"}, splitCSV(" https://one.test, ,https://two.test "))
 }
+
+func TestLoadConfigUsesDefaults(t *testing.T) {
+	t.Setenv("PORT", "")
+	t.Setenv("MONGO_URI", "")
+	t.Setenv("MONGO_DB", "")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("KAFKA_BROKERS", "")
+	t.Setenv("KAFKA_CLIENT_ID", "")
+	t.Setenv("KAFKA_TOPIC_USER_CREATED", "")
+	t.Setenv("KAFKA_TOPIC_USER_UPDATED", "")
+	t.Setenv("KAFKA_TOPIC_USER_DELETED", "")
+	t.Setenv("COOKIE_SECURE", "")
+	t.Setenv("COOKIE_MAX_AGE", "")
+	t.Setenv("COOKIE_SAME_SITE", "")
+	t.Setenv("COOKIE_DOMAIN", "")
+	t.Setenv("ALLOWED_ORIGINS", "")
+
+	cfg := LoadConfig()
+
+	assert.Equal(t, "8081", cfg.Port)
+	assert.Equal(t, "mongodb://localhost:27017", cfg.MongoURI)
+	assert.Equal(t, "auth_db", cfg.MongoDB)
+	assert.Equal(t, "your-secret-key", cfg.JWTSecret)
+	assert.Equal(t, "", cfg.KafkaBrokers)
+	assert.Equal(t, "auth-service", cfg.KafkaClientID)
+	assert.Equal(t, "user.created.v1", cfg.KafkaTopicUserCreated)
+	assert.Equal(t, "user.updated.v1", cfg.KafkaTopicUserUpdated)
+	assert.Equal(t, "user.deleted.v1", cfg.KafkaTopicUserDeleted)
+	assert.False(t, cfg.CookieSecure)
+	assert.Equal(t, 24*60*60, cfg.CookieMaxAge)
+	assert.Equal(t, "Lax", cfg.CookieSameSite)
+	assert.Empty(t, cfg.CookieDomain)
+	assert.Equal(t, []string{"http://localhost:4200", "http://localhost:8085"}, cfg.AllowedOrigins)
+}
+
+func TestLoadConfigReadsEnvironmentOverrides(t *testing.T) {
+	t.Setenv("PORT", "9090")
+	t.Setenv("MONGO_URI", "mongodb://mongo.example:27017")
+	t.Setenv("MONGO_DB", "auth_prod")
+	t.Setenv("JWT_SECRET", "super-secret")
+	t.Setenv("KAFKA_BROKERS", "broker-1:9092,broker-2:9092")
+	t.Setenv("KAFKA_CLIENT_ID", "auth-worker")
+	t.Setenv("KAFKA_TOPIC_USER_CREATED", "custom.created")
+	t.Setenv("KAFKA_TOPIC_USER_UPDATED", "custom.updated")
+	t.Setenv("KAFKA_TOPIC_USER_DELETED", "custom.deleted")
+	t.Setenv("COOKIE_SECURE", "true")
+	t.Setenv("COOKIE_MAX_AGE", "3600")
+	t.Setenv("COOKIE_SAME_SITE", "strict")
+	t.Setenv("COOKIE_DOMAIN", "example.com")
+	t.Setenv("ALLOWED_ORIGINS", " https://app.example.com, , https://admin.example.com ")
+
+	cfg := LoadConfig()
+
+	assert.Equal(t, "9090", cfg.Port)
+	assert.Equal(t, "mongodb://mongo.example:27017", cfg.MongoURI)
+	assert.Equal(t, "auth_prod", cfg.MongoDB)
+	assert.Equal(t, "super-secret", cfg.JWTSecret)
+	assert.Equal(t, "broker-1:9092,broker-2:9092", cfg.KafkaBrokers)
+	assert.Equal(t, "auth-worker", cfg.KafkaClientID)
+	assert.Equal(t, "custom.created", cfg.KafkaTopicUserCreated)
+	assert.Equal(t, "custom.updated", cfg.KafkaTopicUserUpdated)
+	assert.Equal(t, "custom.deleted", cfg.KafkaTopicUserDeleted)
+	assert.True(t, cfg.CookieSecure)
+	assert.Equal(t, 3600, cfg.CookieMaxAge)
+	assert.Equal(t, "strict", cfg.CookieSameSite)
+	assert.Equal(t, "example.com", cfg.CookieDomain)
+	assert.Equal(t, []string{"https://app.example.com", "https://admin.example.com"}, cfg.AllowedOrigins)
+}
+
+func TestMongoDBConfigCloseHandlesNilAndClosedClient(t *testing.T) {
+	var cfg *MongoDBConfig
+	assert.NoError(t, cfg.Close())
+
+	cfg = &MongoDBConfig{}
+	assert.NoError(t, cfg.Close())
+}

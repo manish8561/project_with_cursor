@@ -149,3 +149,32 @@ func TestAuthHandlerLogoutClearsCookie(t *testing.T) {
 	assert.Contains(t, response.Header().Get("Set-Cookie"), cookieConfig.Name+"=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax")
 	assert.JSONEq(t, `{"status":"success","message":"logged out"}`, response.Body.String())
 }
+
+func TestAuthHandlerMeReturnsUserFromAuthorizationHeader(t *testing.T) {
+	r, _, jwtService := setupAuthRouter(t)
+	token, err := jwtService.GenerateToken("header-user")
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	response := httptest.NewRecorder()
+	r.ServeHTTP(response, req)
+
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.JSONEq(t, `{"status":"success","user_id":"header-user"}`, response.Body.String())
+}
+
+func TestAuthHandlerRefreshTokenUsesCookieWhenNoAuthorizationHeader(t *testing.T) {
+	r, cookieConfig, jwtService := setupAuthRouter(t)
+	token, err := jwtService.GenerateToken("cookie-user")
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/refresh", nil)
+	req.AddCookie(&http.Cookie{Name: cookieConfig.Name, Value: token})
+	response := httptest.NewRecorder()
+	r.ServeHTTP(response, req)
+
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Contains(t, response.Header().Get("Set-Cookie"), cookieConfig.Name+"=")
+	assert.JSONEq(t, `{"status":"success"}`, response.Body.String())
+}

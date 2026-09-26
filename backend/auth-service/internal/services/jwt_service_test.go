@@ -119,6 +119,39 @@ func TestAuthServiceRefreshToken(t *testing.T) {
 	}
 }
 
+func TestJWTServiceValidateTokenRejectsTokenWithMissingSignature(t *testing.T) {
+	service := newTestJWTService()
+	claims, err := service.ValidateToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidXNlci0xMjMiLCJleHAiOjM3NDU2MjE3NDAwLCJpYXQiOjE3MDAwMDAwMDB9")
+	if err == nil {
+		t.Fatal("ValidateToken() error = nil, want an error for token missing signature")
+	}
+	if claims != nil {
+		t.Fatalf("ValidateToken() claims = %#v, want nil", claims)
+	}
+}
+
+func TestJWTServiceGenerateTokenIncludesExpectedClaims(t *testing.T) {
+	service := newTestJWTService()
+	token, err := service.GenerateToken("user-42")
+	if err != nil {
+		t.Fatalf("GenerateToken() error = %v", err)
+	}
+
+	claims, err := service.ValidateToken(token)
+	if err != nil {
+		t.Fatalf("ValidateToken() error = %v", err)
+	}
+	if claims.UserID != "user-42" {
+		t.Fatalf("ValidateToken() user ID = %q, want %q", claims.UserID, "user-42")
+	}
+	if claims.IssuedAt == nil || claims.NotBefore == nil || claims.ExpiresAt == nil {
+		t.Fatal("ValidateToken() claims missing timestamps")
+	}
+	if !claims.ExpiresAt.After(time.Now()) {
+		t.Fatal("ValidateToken() expiresAt is not in the future")
+	}
+}
+
 func signedTestToken(t *testing.T, secret, userID string, expiresAt time.Time) string {
 	t.Helper()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{

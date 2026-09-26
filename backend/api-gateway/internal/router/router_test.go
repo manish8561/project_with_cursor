@@ -84,6 +84,30 @@ func TestClientIP_RemoteAddr(t *testing.T) {
 	assert.Equal(t, "127.0.0.1", ip)
 }
 
+func TestClientIP_UsesRemoteAddrWhenHeadersMissing(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = "10.0.0.7:4321"
+	req.Header.Del("X-Forwarded-For")
+	req.Header.Del("X-Real-IP")
+
+	assert.Equal(t, "10.0.0.7", clientIP(req))
+}
+
+func TestWriteRateLimitResponse(t *testing.T) {
+	w := httptest.NewRecorder()
+
+	writeRateLimitResponse(w, 5.0)
+
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Equal(t, "text/plain; charset=utf-8", w.Header().Get("Content-Type"))
+	assert.Equal(t, "1", w.Header().Get("Retry-After"))
+	assert.Equal(t, "rate limit exceeded", w.Body.String())
+
+	w = httptest.NewRecorder()
+	writeRateLimitResponse(w, 0)
+	assert.Empty(t, w.Header().Get("Retry-After"))
+}
+
 func TestRegisterHealthEndpoints(t *testing.T) {
 	srv := kratoshttp.NewServer()
 	RegisterHealthEndpoints(srv)

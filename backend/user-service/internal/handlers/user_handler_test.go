@@ -223,3 +223,61 @@ func TestListUsers_Success(t *testing.T) {
 
 	mockUserService.AssertExpectations(t)
 }
+
+func TestGetUserByID_RejectsMismatchedUserID(t *testing.T) {
+	mockUserService := new(MockUserService)
+	r := setupTestRouter(mockUserService)
+
+	req, _ := http.NewRequest("GET", "/api/users/profile/other-user", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+	assert.JSONEq(t, `{"error":"forbidden"}`, w.Body.String())
+}
+
+func TestUpdateUser_RejectsInvalidJSON(t *testing.T) {
+	mockUserService := new(MockUserService)
+	r := setupTestRouter(mockUserService)
+
+	req, _ := http.NewRequest("PUT", "/api/users/profile/123", bytes.NewBufferString(`{"name":`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "error")
+}
+
+func TestListUsers_DefaultsInvalidPaginationValues(t *testing.T) {
+	mockUserService := new(MockUserService)
+	r := setupTestRouter(mockUserService)
+
+	expectedResponse := &models.UserListResponse{Users: []models.User{{ID: "123", Name: "testuser", Email: "test@example.com"}}, Page: 1, Size: 10, TotalCount: 1, Total: 1}
+	mockUserService.On("ListUsers", 1, 10).Return(expectedResponse, nil)
+
+	req, _ := http.NewRequest("GET", "/api/users/list?page=0&size=9999", nil)
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockUserService.AssertExpectations(t)
+}
+
+func TestDeleteUser_RejectsMissingUserIDParam(t *testing.T) {
+	logger, _ := zap.NewDevelopment()
+	handler := handlers.NewUserHandler(new(MockUserService), logger)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodDelete, "/api/users/profile/", nil)
+	c.Set(middleware.ContextUserIDKey, "123")
+	c.Params = gin.Params{{Key: "id", Value: ""}}
+
+	handler.DeleteUser(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.JSONEq(t, `{"error":"user ID is required"}`, w.Body.String())
+}
