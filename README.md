@@ -34,6 +34,12 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 ./.githooks/install.sh
 ```
 
+Run the vulnerability scan manually at any time, including before pushing. Results are printed in a table for all backend services. The formatter requires `jq`:
+
+```bash
+make -C backend security-check
+```
+
 Skip checks for a single push: `SKIP_GIT_HOOKS=1 git push ...`
 
 ## Quick Start

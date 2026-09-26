@@ -54,6 +54,7 @@ while IFS= read -r file; do
     backend/auth-service/*) needs_backend=1; needs_auth=1 ;;
     backend/user-service/*) needs_backend=1; needs_user=1 ;;
     backend/api-gateway/*) needs_backend=1; needs_gateway=1 ;;
+    backend/*) needs_backend=1 ;;
   esac
 done <<< "$changed_files"
 
@@ -61,33 +62,10 @@ if [[ "$needs_frontend" -eq 0 && "$needs_backend" -eq 0 ]]; then
   exit 0
 fi
 
-if [[ "$needs_backend" -eq 1 ]] && ! command -v govulncheck >/dev/null 2>&1; then
-  echo "error: govulncheck is required for backend pushes — install it with:" >&2
-  echo "  go install golang.org/x/vuln/cmd/govulncheck@latest" >&2
-  exit 1
-fi
-
 echo "[pre-push] Running checks for changes being pushed..."
 
 OUT_DIR="$(mktemp -d)"
 trap 'rm -rf "$OUT_DIR"' EXIT
-
-scan_backend_service() {
-  local name="$1"
-
-  echo ""
-  echo "==> Backend: vulnerability scan ${name}"
-  if (
-    cd "${ROOT}/backend/${name}"
-    govulncheck ./...
-  ); then
-    echo "==> Backend: ${name} vulnerability scan passed"
-  else
-    local status=$?
-    echo "error: ${name} vulnerability scan failed (exit ${status})" >&2
-    vulnerability_scan_failed=1
-  fi
-}
 
 build_backend_service() {
   local name="$1"
@@ -126,12 +104,10 @@ build_frontend() {
 
 # Scan every backend service when backend code is part of the push.
 if [[ "$needs_backend" -eq 1 ]]; then
-  vulnerability_scan_failed=0
-  scan_backend_service "auth-service"
-  scan_backend_service "user-service"
-  scan_backend_service "api-gateway"
-  if [[ "$vulnerability_scan_failed" -eq 1 ]]; then
-    echo "error: one or more backend vulnerability scans failed; refusing to push" >&2
+  echo ""
+  echo "==> Backend: vulnerability scan all services"
+  if ! make -C "${ROOT}/backend" security-check; then
+    echo "error: backend vulnerability scans failed; refusing to push" >&2
     exit 1
   fi
 fi

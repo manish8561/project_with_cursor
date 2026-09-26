@@ -98,6 +98,18 @@ backend/
 ### Prerequisites
 - Docker and Docker Compose
 - Go 1.26 or later (for local development)
+- `govulncheck` for dependency vulnerability scans (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
+- `jq` to format vulnerability scan results
+
+### Vulnerability Checks
+
+Scan all backend services (`auth-service`, `user-service`, and `api-gateway`) from the repository root before pushing. Results are displayed in a table:
+
+```bash
+make -C backend security-check
+```
+
+The repository's pre-push hook runs the same check automatically when backend files are included in a push. Install the hook with `./.githooks/install.sh` from the repository root.
 
 ### Running the Services
 
