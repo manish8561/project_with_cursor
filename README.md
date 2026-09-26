@@ -27,13 +27,14 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 ### Git hooks (optional)
 
-Install the pre-push hook once after cloning (runs all Go tests and builds each changed backend service, and builds the frontend when related files are pushed):
+Install the pre-push hook once after cloning (scans all backend services for vulnerabilities when backend files change, runs tests and builds each changed backend service, and builds the frontend when frontend files change). The backend vulnerability scan requires `govulncheck`:
 
 ```bash
+go install golang.org/x/vuln/cmd/govulncheck@latest
 ./.githooks/install.sh
 ```
 
-Skip builds for a single push: `SKIP_GIT_HOOKS=1 git push ...`
+Skip checks for a single push: `SKIP_GIT_HOOKS=1 git push ...`
 
 ## Quick Start
 

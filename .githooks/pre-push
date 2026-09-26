@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Pre-push: test and build backend services, and build the frontend, when related files are in the push.
+# Pre-push: scan all backend services for vulnerabilities, test/build changed services,
+# and build the frontend when related files are in the push.
 # Skip with: SKIP_GIT_HOOKS=1 git push ...
 
 set -euo pipefail
@@ -44,25 +45,49 @@ needs_frontend=0
 needs_auth=0
 needs_user=0
 needs_gateway=0
+needs_backend=0
 
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
     frontend/*) needs_frontend=1 ;;
-    backend/auth-service/*) needs_auth=1 ;;
-    backend/user-service/*) needs_user=1 ;;
-    backend/api-gateway/*) needs_gateway=1 ;;
+    backend/auth-service/*) needs_backend=1; needs_auth=1 ;;
+    backend/user-service/*) needs_backend=1; needs_user=1 ;;
+    backend/api-gateway/*) needs_backend=1; needs_gateway=1 ;;
   esac
 done <<< "$changed_files"
 
-if [[ "$needs_frontend" -eq 0 && "$needs_auth" -eq 0 && "$needs_user" -eq 0 && "$needs_gateway" -eq 0 ]]; then
+if [[ "$needs_frontend" -eq 0 && "$needs_backend" -eq 0 ]]; then
   exit 0
 fi
 
-echo "[pre-push] Running builds for changes being pushed..."
+if [[ "$needs_backend" -eq 1 ]] && ! command -v govulncheck >/dev/null 2>&1; then
+  echo "error: govulncheck is required for backend pushes — install it with:" >&2
+  echo "  go install golang.org/x/vuln/cmd/govulncheck@latest" >&2
+  exit 1
+fi
+
+echo "[pre-push] Running checks for changes being pushed..."
 
 OUT_DIR="$(mktemp -d)"
 trap 'rm -rf "$OUT_DIR"' EXIT
+
+scan_backend_service() {
+  local name="$1"
+
+  echo ""
+  echo "==> Backend: vulnerability scan ${name}"
+  if (
+    cd "${ROOT}/backend/${name}"
+    govulncheck ./...
+  ); then
+    echo "==> Backend: ${name} vulnerability scan passed"
+  else
+    local status=$?
+    echo "error: ${name} vulnerability scan failed (exit ${status})" >&2
+    vulnerability_scan_failed=1
+  fi
+}
 
 build_backend_service() {
   local name="$1"
@@ -99,6 +124,18 @@ build_frontend() {
   echo "==> Frontend: OK"
 }
 
+# Scan every backend service when backend code is part of the push.
+if [[ "$needs_backend" -eq 1 ]]; then
+  vulnerability_scan_failed=0
+  scan_backend_service "auth-service"
+  scan_backend_service "user-service"
+  scan_backend_service "api-gateway"
+  if [[ "$vulnerability_scan_failed" -eq 1 ]]; then
+    echo "error: one or more backend vulnerability scans failed; refusing to push" >&2
+    exit 1
+  fi
+fi
+
 # Build backend services separately.
 if [[ "$needs_auth" -eq 1 ]]; then
   build_backend_service "auth-service" "auth-service"
@@ -116,5 +153,5 @@ if [[ "$needs_frontend" -eq 1 ]]; then
 fi
 
 echo ""
-echo "[pre-push] All required tests and builds passed"
+echo "[pre-push] All required vulnerability scans, tests, and builds passed"
 exit 0
