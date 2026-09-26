@@ -27,7 +27,7 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 ### Git hooks (optional)
 
-Install the pre-push hook once after cloning (builds frontend and backend separately when related files are pushed):
+Install the pre-push hook once after cloning (runs all Go tests and builds each changed backend service, and builds the frontend when related files are pushed):
 
 ```bash
 ./.githooks/install.sh
@@ -694,19 +694,19 @@ KAFKA_TOPIC_USER_DELETED=user.deleted.v1
 - **Observability**
   - Add `trace_id` propagation across API Gateway, Auth Service, and User Service.
   - Integrate OpenTelemetry for distributed tracing and metrics collection.
+  -  **Service Discovery**: Implement service discovery (Consul, etcd)
 - **Infrastructure**
   - Add Kubernetes manifests/Helm charts for frontend and backend deployments.
   - Introduce environment-specific deployment overlays (dev, test, prod).
 - **Quality and reliability**
   - Expand automated test coverage (unit, integration, and API contract tests).
   - Add CI checks for build, lint, test, and image validation.
+  - Add comprehensive test suites for each service
 - **Notification Service**
   - For sending email, sms, push notifications, whatsapp, etc. as per need
   - Separate service with no link api gateway
 
-1. **Service Discovery**: Implement service discovery (Consul, etcd)
-2. **Load Balancing**: Add load balancers for each service
+1. **Load Balancing**: Add load balancers for each service
 3. **Circuit Breakers**: Implement circuit breakers for service communication
 4. **Distributed Tracing**: Add tracing (Jaeger, Zipkin)
-5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana)
-6. **Testing**: Add comprehensive test suites for each service
+5. **Monitoring**: Implement metrics and monitoring (Prometheus, Grafana) 
