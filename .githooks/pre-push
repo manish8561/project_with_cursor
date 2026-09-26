@@ -72,7 +72,7 @@ build_backend_service() {
   echo "==> Backend: testing ${name}"
   (
     cd "${ROOT}/backend/${name}"
-    go test ./...
+    go test ./... -v -count 1
   )
   echo "==> Backend: ${name} tests passed"
 
