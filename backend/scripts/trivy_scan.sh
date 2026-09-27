@@ -3,6 +3,8 @@ set -uo pipefail
 
 services=(auth-service user-service api-gateway)
 severity="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
+trivy_image="${TRIVY_IMAGE:-aquasec/trivy:latest}"
+trivy_cache_volume="${TRIVY_CACHE_VOLUME:-backend-trivy-cache}"
 scan_id="trivy-$$-${RANDOM}"
 failed=0
 images=()
@@ -20,23 +22,40 @@ case "$mode" in
     ;;
 esac
 
-if ! command -v trivy >/dev/null 2>&1; then
-  echo "error: Trivy is required — install it from https://trivy.dev/latest/getting-started/installation/" >&2
+if ! command -v docker >/dev/null 2>&1; then
+  echo "error: Docker is required to run Trivy from the ${trivy_image} container" >&2
+  exit 1
+fi
+if ! docker info >/dev/null 2>&1; then
+  echo "error: the Docker daemon is unavailable; start Docker before scanning" >&2
+  exit 1
+fi
+if ! docker pull "$trivy_image"; then
+  echo "error: could not pull Trivy image ${trivy_image}" >&2
   exit 1
 fi
 
-if [[ "$mode" == "all" || "$mode" == "image" ]]; then
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "error: Docker is required to build images for Trivy image scans" >&2
-    exit 1
-  fi
-  if ! docker info >/dev/null 2>&1; then
-    echo "error: the Docker daemon is unavailable; start Docker before scanning service images" >&2
-    exit 1
-  fi
-fi
-
 backend_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+trivy_ignore_file="${backend_dir}/.trivyignore"
+
+trivy_fs() {
+  local service_dir="$1"
+  shift
+  docker run --rm \
+    --mount "type=volume,source=${trivy_cache_volume},target=/root/.cache/" \
+    --mount "type=bind,source=${service_dir},target=/src,readonly" \
+    --mount "type=bind,source=${trivy_ignore_file},target=/etc/trivy/.trivyignore,readonly" \
+    --workdir /src \
+    "$trivy_image" fs --ignorefile /etc/trivy/.trivyignore "$@"
+}
+
+trivy_image_scan() {
+  docker run --rm \
+    --mount "type=volume,source=${trivy_cache_volume},target=/root/.cache/" \
+    --mount "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock" \
+    --mount "type=bind,source=${trivy_ignore_file},target=/etc/trivy/.trivyignore,readonly" \
+    "$trivy_image" image --ignorefile /etc/trivy/.trivyignore "$@"
+}
 
 cleanup() {
   for image in "${images[@]}"; do
@@ -49,10 +68,8 @@ cleanup() {
 if [[ "$mode" == "all" || "$mode" == "fs" ]]; then
   for service in "${services[@]}"; do
     echo "Scanning ${service} Go dependencies with Trivy..."
-    if ! (
-      cd "${backend_dir}/${service}" &&
-        trivy fs --scanners vuln --severity "$severity" --exit-code 1 --format table .
-    ); then
+    if ! trivy_fs "${backend_dir}/${service}" \
+      --scanners vuln --severity "$severity" --exit-code 1 --format table .; then
       failed=1
     fi
   done
@@ -72,7 +89,8 @@ if [[ "$mode" == "all" || "$mode" == "image" ]]; then
     images+=("$image")
 
     echo "Scanning ${service} image with Trivy..."
-    if ! trivy image --scanners vuln --severity "$severity" --exit-code 1 --format table "$image"; then
+    if ! trivy_image_scan \
+      --scanners vuln --severity "$severity" --exit-code 1 --format table "$image"; then
       failed=1
     fi
   done

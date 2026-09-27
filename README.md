@@ -27,7 +27,7 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 ### Git hooks (optional)
 
-Install the pre-push hook once after cloning (scans all backend services for vulnerabilities when backend files change, runs tests and builds each changed backend service, and builds the frontend when frontend files change). The backend vulnerability scan requires `govulncheck`, `jq`, [Trivy](https://trivy.dev/latest/getting-started/installation/), and a running Docker daemon:
+Install the pre-push hook once after cloning (scans all backend services for vulnerabilities when backend files change, runs tests and builds each changed backend service, and builds the frontend when frontend files change). The backend vulnerability scan requires `govulncheck`, `jq`, and a running Docker daemon. Trivy runs from the `aquasec/trivy` Docker image, so no host Trivy installation is needed:
 
 ```bash
 go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -41,6 +41,20 @@ make -C backend security-check
 ```
 
 Skip checks for a single push: `SKIP_GIT_HOOKS=1 git push ...`
+
+Run the scanners separately for local testing. Run `govulncheck` across all Go services:
+
+```bash
+for service in auth-service user-service api-gateway; do
+  (cd "backend/$service" && govulncheck ./...) || exit 1
+done
+```
+
+Run Trivy filesystem and container image scans without `govulncheck`:
+
+```bash
+make -C backend trivy-security-check
+```
 
 ## Quick Start
 

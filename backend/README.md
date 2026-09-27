@@ -100,21 +100,36 @@ backend/
 - Go 1.26 or later (for local development)
 - `govulncheck` for dependency vulnerability scans (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
 - `jq` to format vulnerability scan results
-- [Trivy](https://trivy.dev/latest/getting-started/installation/) for dependency and container image scans
-- A running Docker daemon to build and scan the Go service images
+- A running Docker daemon to run Trivy from the `aquasec/trivy` image and build the service images
 
 ### Vulnerability Checks
 
-Scan all backend services (`auth-service`, `user-service`, and `api-gateway`) from the repository root before pushing. The check runs `govulncheck`, Trivy filesystem scans of each Go module, and Trivy vulnerability scans of freshly built Docker images. Temporary scan images are removed when the scan finishes.
+Scan all backend services (`auth-service`, `user-service`, and `api-gateway`) from the repository root before pushing. The check runs `govulncheck`, Trivy filesystem scans of each Go module, and Trivy vulnerability scans of freshly built Docker images. Trivy runs in disposable `aquasec/trivy:latest` containers using `docker run`; the image is pulled before each scan so the scanner stays current. Image scans mount the local Docker socket, the vulnerability database is cached in the `backend-trivy-cache` Docker volume, and temporary service images are removed when the scan finishes. The first scan downloads the vulnerability database.
 
 ```bash
 make -C backend security-check
 ```
 
-The Trivy scans can also be run on their own:
+The Trivy ignore list in `backend/.trivyignore` records two scoped exceptions: `GO-2026-5932` affects OpenPGP, which these services do not import (they use `x/crypto/pbkdf2`); `GO-2026-5471` / `CVE-2026-6993` is mitigated by explicitly configuring safe 404 and 405 handlers in the API gateway, pending an upstream Kratos release with the fix. The `govulncheck` summary labels these as `NOT REACHABLE` and `MITIGATED`, respectively.
+
+Run either scanner independently for local testing. From the repository root, run `govulncheck` across all Go services:
+
+```bash
+for service in auth-service user-service api-gateway; do
+  (cd "backend/$service" && govulncheck ./...) || exit 1
+done
+```
+
+Run Trivy filesystem and container image scans without `govulncheck`:
 
 ```bash
 make -C backend trivy-security-check
+```
+
+To use a pinned Trivy image or a different cache volume, set `TRIVY_IMAGE` or `TRIVY_CACHE_VOLUME` when running the Make target:
+
+```bash
+TRIVY_IMAGE=aquasec/trivy:0.74.0 TRIVY_CACHE_VOLUME=custom-trivy-cache make -C backend trivy-security-check
 ```
 
 The repository's pre-push hook runs the full check automatically when backend files are included in a push. Install the hook with `./.githooks/install.sh` from the repository root.

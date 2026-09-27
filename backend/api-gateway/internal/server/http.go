@@ -1,6 +1,8 @@
 package server
 
 import (
+	stdhttp "net/http"
+
 	v1 "api-gateway/api/helloworld/v1"
 	"api-gateway/internal/conf"
 	"api-gateway/internal/router"
@@ -24,6 +26,10 @@ func NewHTTPServer(c *conf.Server, greeter *service.GreeterService, logger log.L
 		kratoshttp.Middleware(
 			recovery.Recovery(),
 		),
+		kratoshttp.NotFoundHandler(stdhttp.NotFoundHandler()),
+		kratoshttp.MethodNotAllowedHandler(stdhttp.HandlerFunc(func(w stdhttp.ResponseWriter, _ *stdhttp.Request) {
+			w.WriteHeader(stdhttp.StatusMethodNotAllowed)
+		})),
 	}
 	if c.Http.Network != "" {
 		opts = append(opts, kratoshttp.Network(c.Http.Network))

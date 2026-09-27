@@ -1,0 +1,6 @@
+# OpenPGP is not imported by these services; x/crypto is used for PBKDF2.
+GO-2026-5932
+
+# The gateway overrides Kratos's unsafe default handlers in internal/server/http.go.
+GO-2026-5471
+CVE-2026-6993
