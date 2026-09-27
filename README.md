@@ -27,14 +27,14 @@ A full-stack application with Angular frontend and Go microservices backend.
 
 ### Git hooks (optional)
 
-Install the pre-push hook once after cloning (scans all backend services for vulnerabilities when backend files change, runs tests and builds each changed backend service, and builds the frontend when frontend files change). The backend vulnerability scan requires `govulncheck`:
+Install the pre-push hook once after cloning (scans all backend services for vulnerabilities when backend files change, runs tests and builds each changed backend service, and builds the frontend when frontend files change). The backend vulnerability scan requires `govulncheck`, `jq`, [Trivy](https://trivy.dev/latest/getting-started/installation/), and a running Docker daemon:
 
 ```bash
 go install golang.org/x/vuln/cmd/govulncheck@latest
 ./.githooks/install.sh
 ```
 
-Run the vulnerability scan manually at any time, including before pushing. Results are printed in a table for all backend services. The formatter requires `jq`:
+Run the vulnerability scan manually at any time, including before pushing. It runs `govulncheck`, scans Go dependencies and freshly built service images with Trivy, and prints results for all backend services:
 
 ```bash
 make -C backend security-check

@@ -1,7 +1,7 @@
 BACKEND_SERVICES := auth-service user-service api-gateway
 
-.PHONY: security-check
-# Scan every backend service for known Go vulnerabilities.
+.PHONY: security-check trivy-security-check trivy-fs-security-check trivy-image-security-check
+# Scan every backend service for known Go and image vulnerabilities.
 security-check:
 	@if ! command -v govulncheck >/dev/null 2>&1; then \
 		echo "error: govulncheck is required — install it with:" >&2; \
@@ -22,4 +22,16 @@ security-check:
 			echo $$? > "$$tmp_dir/$$service.exit"; \
 		fi; \
 	done; \
-	bash scripts/vulnerability_table.sh "$$tmp_dir"
+	bash scripts/vulnerability_table.sh "$$tmp_dir"; govulncheck_status=$$?; \
+	bash scripts/trivy_scan.sh all; trivy_status=$$?; \
+	test "$$govulncheck_status" -eq 0 -a "$$trivy_status" -eq 0
+
+# Run Trivy without the govulncheck scan.
+trivy-security-check:
+	bash scripts/trivy_scan.sh all
+
+trivy-fs-security-check:
+	bash scripts/trivy_scan.sh fs
+
+trivy-image-security-check:
+	bash scripts/trivy_scan.sh image
