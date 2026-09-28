@@ -7,6 +7,7 @@ This directory contains the microservices implementation of the backend, breakin
 The application has been decomposed into the following microservices:
 
 ### 1. Auth Service (`auth-service`)
+
 - **Port**: 8081
 - **Purpose**: Handles user authentication, registration, and session management via HttpOnly cookies
 - **Endpoints**:
@@ -18,6 +19,7 @@ The application has been decomposed into the following microservices:
   - `POST /api/auth/refresh` - Refresh session (sets new cookie)
 
 ### 2. User Service (`user-service`)
+
 - **Port**: 8082
 - **Purpose**: Manages user data and profiles
 - **Endpoints** (all require `access_token` cookie or Bearer token):
@@ -27,7 +29,20 @@ The application has been decomposed into the following microservices:
   - `PUT /api/users/profile/:id` - Update user
   - `DELETE /api/users/profile/:id` - Delete user
 
-### 3. API Gateway (`api-gateway`)
+### 3. Notification Service (`notification-service`)
+
+- **Port**: 8083 (internal in production)
+- **Purpose**: Sends backend-triggered notifications through channel adapters; email is the first channel
+- **Endpoints** (all require `access_token` cookie or Bearer token and use the authenticated user ID):
+  - `GET /api/notifications/preferences` - Read the current user's email preference
+  - `PUT /api/notifications/preferences` - Update it with `{"emailEnabled": true}`
+  - `GET /api/notifications/history?page=1&size=20` - List the current user's delivery history
+- **Event**: Consumes `user.created.v1` and sends a welcome email when enabled. Event IDs are unique in notification history to make redelivery idempotent.
+- **Retention**: Notification records expire after 90 days.
+- **Email configuration**: Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `EMAIL_FROM`. These values are not committed; attempted delivery without SMTP configuration is recorded as failed.
+
+### 4. API Gateway (`api-gateway`)
+
 - **Port**: 8080
 - **Purpose**: Single entry point for all client requests, handles routing and authentication
 - **Features**:
@@ -36,22 +51,24 @@ The application has been decomposed into the following microservices:
   - CORS handling
   - Load balancing (future enhancement)
 
-### 4. Shared Database
+### 5. Shared Database
+
 - **MongoDB**: Database-per-service model
 - **Collections**: `auth_db.auth_users` (auth-service), `user_db.user_profiles` (user-service, synced via Kafka)
+- **Notification database**: `notification_db.notification_preferences` and `notification_db.notification_records`
 
 ## Authentication
 
 Sessions use an **HttpOnly cookie** named `access_token` containing a JWT. The browser sends this cookie automatically on subsequent requests; the frontend does not store tokens in `localStorage`.
 
-| Setting | Env var | Default |
-|---------|---------|---------|
-| Cookie name | — | `access_token` |
-| HttpOnly | — | `true` |
-| SameSite | `COOKIE_SAME_SITE` | `Lax` |
-| Secure | `COOKIE_SECURE` | `false` (set `true` in HTTPS production) |
-| Max age | `COOKIE_MAX_AGE` | `86400` (24 hours) |
-| Allowed origins | `ALLOWED_ORIGINS` | `http://localhost:4200,http://localhost:8085` |
+| Setting         | Env var            | Default                                       |
+| --------------- | ------------------ | --------------------------------------------- |
+| Cookie name     | —                  | `access_token`                                |
+| HttpOnly        | —                  | `true`                                        |
+| SameSite        | `COOKIE_SAME_SITE` | `Lax`                                         |
+| Secure          | `COOKIE_SECURE`    | `false` (set `true` in HTTPS production)      |
+| Max age         | `COOKIE_MAX_AGE`   | `86400` (24 hours)                            |
+| Allowed origins | `ALLOWED_ORIGINS`  | `http://localhost:4200,http://localhost:8085` |
 
 Both auth-service and user-service must share the same `JWT_SECRET`. CORS is configured with explicit origins and `Access-Control-Allow-Credentials: true` (wildcard `*` is not used with cookies).
 
@@ -96,6 +113,7 @@ backend/
 ## Getting Started
 
 ### Prerequisites
+
 - Docker and Docker Compose
 - Go 1.26 or later (for local development)
 - `govulncheck` for dependency vulnerability scans (`go install golang.org/x/vuln/cmd/govulncheck@latest`)
@@ -137,6 +155,7 @@ The repository's pre-push hook runs the full check automatically when backend fi
 ### Running the Services
 
 1. **Start all services with Docker Compose**:
+
    ```bash
    cd deploy
    docker compose up --build
@@ -151,6 +170,7 @@ The repository's pre-push hook runs the full check automatically when backend fi
 ### Testing Environment
 
 1. **Start test environment**:
+
    ```bash
    cd deploy
    docker compose -f docker-compose.test.yml up --build
@@ -165,6 +185,7 @@ The repository's pre-push hook runs the full check automatically when backend fi
 ### Development
 
 1. **Build and run individual services**:
+
    ```bash
    # Auth Service
    cd auth-service
@@ -183,6 +204,7 @@ The repository's pre-push hook runs the full check automatically when backend fi
    ```
 
 2. **Environment Variables**:
+
    ```bash
    # Auth Service
    PORT=8081
@@ -280,6 +302,7 @@ RATE_LIMIT_RPS=50 RATE_LIMIT_BURST=100 \
 ## Docker Commands
 
 ### Production
+
 ```bash
 # Start all services
 cd deploy
@@ -298,6 +321,7 @@ docker compose logs api-gateway
 ```
 
 ### Testing
+
 ```bash
 # Start test environment
 cd deploy
@@ -311,6 +335,7 @@ docker compose -f docker-compose.test.yml logs
 ```
 
 ### Individual Services
+
 ```bash
 # Build individual services
 docker build -t auth-service auth-service/
@@ -328,19 +353,23 @@ docker run -p 8080:8080 api-gateway
 All services implement structured logging using **Zap** for high-performance, structured JSON logging.
 
 ### Features
+
 - **Structured JSON Output**: All logs are in JSON format for easy parsing
 - **Environment-based Log Levels**: Configure via `LOG_LEVEL` environment variable
 - **Service Identification**: Each log entry includes the service name
 - **Performance Optimized**: Uses Uber's Zap logger for minimal overhead
 
 ### Log Levels
+
 Set the `LOG_LEVEL` environment variable to control logging verbosity:
+
 - `debug`: Most verbose, includes debug information
 - `info`: General information (default)
 - `warn`: Warning messages
 - `error`: Error messages only
 
 ### Example Log Output
+
 ```json
 {
   "level": "info",
@@ -353,6 +382,7 @@ Set the `LOG_LEVEL` environment variable to control logging verbosity:
 ```
 
 ### Usage in Code
+
 ```go
 import "your-service/internal/logger"
 
@@ -360,7 +390,7 @@ import "your-service/internal/logger"
 logger.InitLogger()
 
 // Use logger
-logger.GetLogger().Info("User authenticated", 
+logger.GetLogger().Info("User authenticated",
     zap.String("user_id", userID),
     zap.String("email", email),
 )
@@ -402,6 +432,7 @@ logger.GetLogger().Error("Database connection failed",
 5. **Cookie not sent**: Ensure requests use credentials (`withCredentials: true` in browsers); in Docker, use the frontend at `http://localhost:8085` so `/api` is same-origin
 
 ### Logs
+
 ```bash
 # View all service logs
 docker compose logs
@@ -416,6 +447,7 @@ docker compose logs -f
 ```
 
 ### Health Checks
+
 ```bash
 # Check service health
 curl http://localhost:8080/health  # API Gateway
@@ -426,6 +458,7 @@ curl http://localhost:8082/health  # User Service
 ## Environment Variables
 
 ### Production Environment
+
 ```bash
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
@@ -458,6 +491,7 @@ LOG_LEVEL=info
 ```
 
 ### Test Environment
+
 ```bash
 # MongoDB
 MONGO_INITDB_ROOT_USERNAME=admin
@@ -487,4 +521,4 @@ PORT=8080
 AUTH_SERVICE_URL=http://auth-service:8081
 USER_SERVICE_URL=http://user-service:8082
 LOG_LEVEL=debug
-``` 
+```

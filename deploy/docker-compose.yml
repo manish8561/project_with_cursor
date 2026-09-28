@@ -110,6 +110,42 @@ services:
       timeout: 10s
       retries: 3
 
+  # Shared Notification Service
+  notification-service:
+    build:
+      context: ../backend/notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - PORT=8083
+      - MONGO_URI=mongodb://admin:password@mongodb:27017
+      - MONGO_DB=notification_db
+      - JWT_SECRET=your-super-secret-jwt-key
+      - ALLOWED_ORIGINS=http://localhost:4200,http://localhost:8085
+      - KAFKA_BROKERS=kafka:9092
+      - KAFKA_GROUP_ID=notification-service-group
+      - KAFKA_CLIENT_ID=notification-service
+      - KAFKA_TOPIC_USER_CREATED=user.created.v1
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
+    depends_on:
+      - mongodb
+      - kafka
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      start_period: 30s
+      interval: 999d
+      timeout: 10s
+      retries: 3
+
   # API Gateway (Kratos)
   api-gateway:
     build:
@@ -126,6 +162,7 @@ services:
     depends_on:
       - auth-service
       - user-service
+      - notification-service
     networks:
       - microservices-network
     healthcheck:

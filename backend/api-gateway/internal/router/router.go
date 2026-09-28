@@ -21,7 +21,10 @@ type simpleTokenBucketLimiter struct {
 	buckets map[string]*tokenBucket
 }
 
-const maxLimiterBuckets = 10000
+const (
+	maxLimiterBuckets = 10000
+	badGatewayMessage = "Bad Gateway"
+)
 
 type tokenBucket struct {
 	tokens   float64
@@ -122,13 +125,13 @@ func RegisterHealthEndpoints(srv *http.Server) {
 		target := "http://auth-service:8081/health"
 		req, err := nethttp.NewRequest(r.Method, target, r.Body)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		req.Header = r.Header
 		resp, err := nethttp.DefaultClient.Do(req)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close()
@@ -143,13 +146,34 @@ func RegisterHealthEndpoints(srv *http.Server) {
 		target := "http://user-service:8082/health"
 		req, err := nethttp.NewRequest(r.Method, target, r.Body)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		req.Header = r.Header
 		resp, err := nethttp.DefaultClient.Do(req)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
+	srv.HandleFunc("/api/notifications/health", func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		target := "http://notification-service:8083/health"
+		req, err := nethttp.NewRequest(r.Method, target, r.Body)
+		if err != nil {
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
+			return
+		}
+		req.Header = r.Header
+		resp, err := nethttp.DefaultClient.Do(req)
+		if err != nil {
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close()
@@ -186,13 +210,13 @@ func RegisterProxyRoutes(srv *http.Server, limiter *simpleTokenBucketLimiter, rp
 		target := "http://auth-service:8081" + r.URL.Path
 		req, err := nethttp.NewRequest(r.Method, target, r.Body)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		req.Header = r.Header
 		resp, err := nethttp.DefaultClient.Do(req)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close()
@@ -211,13 +235,38 @@ func RegisterProxyRoutes(srv *http.Server, limiter *simpleTokenBucketLimiter, rp
 		target := "http://user-service:8082" + r.URL.Path
 		req, err := nethttp.NewRequest(r.Method, target, r.Body)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		req.Header = r.Header
 		resp, err := nethttp.DefaultClient.Do(req)
 		if err != nil {
-			nethttp.Error(w, "Bad Gateway", nethttp.StatusBadGateway)
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	}))
+
+	srv.HandlePrefix("/api/notifications/", nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		if !limiter.allow(clientIP(r)) {
+			writeRateLimitResponse(w, rps)
+			return
+		}
+		target := "http://notification-service:8083" + r.URL.RequestURI()
+		req, err := nethttp.NewRequest(r.Method, target, r.Body)
+		if err != nil {
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
+			return
+		}
+		req.Header = r.Header
+		resp, err := nethttp.DefaultClient.Do(req)
+		if err != nil {
+			nethttp.Error(w, badGatewayMessage, nethttp.StatusBadGateway)
 			return
 		}
 		defer resp.Body.Close()

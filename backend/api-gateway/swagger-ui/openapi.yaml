@@ -2,7 +2,7 @@ openapi: "3.1.0"
 info:
     title: Backend With Cursor API Gateway
     description: |
-        API Gateway for microservices-based backend with authentication and user management services.
+        API Gateway for microservices-based backend with authentication, user management, and notifications.
 
         ## Authentication
 
@@ -54,6 +54,106 @@ paths:
                                 $ref: '#/components/schemas/HealthStatus'
                 "502":
                     description: User service is unavailable
+
+    /api/notifications/health:
+        get:
+            tags:
+                - Health
+            summary: Health check for Notification service
+            description: Returns the health status of the Notification service via API Gateway.
+            operationId: NotificationService_Health
+            responses:
+                "200":
+                    description: Notification service is healthy
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/HealthStatus'
+                "502":
+                    description: Notification service is unavailable
+
+    /api/notifications/preferences:
+        get:
+            tags:
+                - Notifications
+            summary: Get the current user's email preference
+            security:
+                - cookieAuth: []
+            responses:
+                "200":
+                    description: Current user's email preference
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    userId: { type: string }
+                                    emailEnabled: { type: boolean }
+                                    updatedAt: { type: string, format: date-time }
+                "401":
+                    description: Authentication required
+        put:
+            tags:
+                - Notifications
+            summary: Update the current user's email preference
+            security:
+                - cookieAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required: [emailEnabled]
+                            properties:
+                                emailEnabled: { type: boolean }
+            responses:
+                "200":
+                    description: Updated email preference
+                "400":
+                    description: Missing or invalid emailEnabled value
+                "401":
+                    description: Authentication required
+
+    /api/notifications/history:
+        get:
+            tags:
+                - Notifications
+            summary: List the current user's notification delivery history
+            security:
+                - cookieAuth: []
+            parameters:
+                - name: page
+                  in: query
+                  schema: { type: integer, minimum: 1, default: 1 }
+                - name: size
+                  in: query
+                  schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+            responses:
+                "200":
+                    description: Paginated notification records for the authenticated user
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    items:
+                                        type: array
+                                        items:
+                                            type: object
+                                            properties:
+                                                id: { type: string }
+                                                type: { type: string, example: welcome }
+                                                channel: { type: string, example: email }
+                                                status: { type: string, enum: [queued, sent, failed, skipped] }
+                                                createdAt: { type: string, format: date-time }
+                                                updatedAt: { type: string, format: date-time }
+                                                errorSummary: { type: string }
+                                    total: { type: integer }
+                                    page: { type: integer }
+                                    size: { type: integer }
+                "401":
+                    description: Authentication required
 
     /health:
         get:

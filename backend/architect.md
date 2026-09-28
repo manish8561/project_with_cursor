@@ -1,6 +1,6 @@
 # Backend Architecture Diagram
 
-This document defines the complete backend flow for the application, including the client, API gateway, auth service, user service, MongoDB storage, and Kafka event sync.
+This document defines the complete backend flow for the application, including the client, API gateway, auth service, user service, notification service, MongoDB storage, and Kafka event sync.
 
 ## High-level architecture
 
@@ -15,12 +15,14 @@ flowchart LR
         GW[API Gateway\nlocalhost:8080\nRoutes + CORS]
         AS[Auth Service\nlocalhost:8081\nLogin / Register / Validate / Refresh]
         US[User Service\nlocalhost:8082\nProfile CRUD + Auth Middleware]
+        NS[Notification Service\nlocalhost:8083\nEmail + Preference/History APIs]
         KAFKA[Kafka\nUser lifecycle events]
     end
 
     subgraph Data[Data Stores]
         AUTHDB[(MongoDB\nauth_db)]
         USERDB[(MongoDB\nuser_db)]
+        NOTIFYDB[(MongoDB\nnotification_db)]
     end
 
     FE -->|HTTP + credentials| GW
@@ -31,6 +33,7 @@ flowchart LR
 
     GW -->|/api/auth/*| AS
     GW -->|/api/users/*| US
+    GW -->|/api/notifications/*| NS
 
     AS -->|Create / validate / refresh user session| AUTHDB
     AS -->|Publish user.created.v1| KAFKA
@@ -39,9 +42,13 @@ flowchart LR
 
     KAFKA -->|Consume user lifecycle events| US
     US -->|Read / write user profiles| USERDB
+    KAFKA -->|user.created.v1| NS
+    NS -->|Persist preferences and delivery history| NOTIFYDB
+    NS -->|SMTP welcome email| EMAIL[Email provider]
 
     US -->|Return profile data| FE
     AS -->|Return auth result / cookie| FE
+    NS -->|Return preference and history| FE
 ```
 
 ## Authentication flow
@@ -99,10 +106,12 @@ flowchart TD
 5. JWT is stored in an HttpOnly cookie named `access_token`.
 6. Events are published to Kafka when user lifecycle changes occur.
 7. User service consumes those events to keep the profile database synchronized.
+8. Notification service consumes `user.created.v1`, checks the user's email preference, and records the welcome-email outcome. Browser clients can only read or update their own preference and history through the gateway.
 
 ## Notes
 
 - `auth-service` owns `auth_db` authentication data.
 - `user-service` owns `user_db` profile data.
+- `notification-service` owns `notification_db` preferences and delivery history.
 - The API gateway acts as the single entry point for frontend traffic.
 - Cookie-based auth is used for browser sessions, while JWT validation also supports Bearer token fallback in some flows.

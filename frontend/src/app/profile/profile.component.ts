@@ -1,19 +1,35 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { CommonModule } from '@angular/common';
+import {
+  NotificationHistory,
+  NotificationPreference,
+  NotificationService,
+} from '../services/notification.service';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.scss']
+  styleUrls: ['./profile.component.scss'],
 })
 export class ProfileComponent implements OnInit {
   user: any;
   errorMessage: string = '';
+  notificationError = '';
+  preference?: NotificationPreference;
+  history?: NotificationHistory;
+  savingPreference = false;
 
-  constructor(private authService: AuthService) { }
+  get historyPageCount(): number {
+    return this.history ? Math.ceil(this.history.total / this.history.size) : 0;
+  }
+
+  constructor(
+    private readonly authService: AuthService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   ngOnInit(): void {
     this.authService.getProfile().subscribe({
@@ -22,7 +38,50 @@ export class ProfileComponent implements OnInit {
       },
       error: (error) => {
         this.errorMessage = error.error?.error || 'Failed to load profile.';
-      }
+      },
     });
+
+    this.loadNotifications();
+  }
+
+  loadNotifications(page = 1): void {
+    this.notificationError = '';
+    this.notificationService.getPreference().subscribe({
+      next: (preference) => (this.preference = preference),
+      error: () =>
+        (this.notificationError = 'Could not load email preferences.'),
+    });
+    this.notificationService.getHistory(page).subscribe({
+      next: (history) => (this.history = history),
+      error: () =>
+        (this.notificationError = 'Could not load notification history.'),
+    });
+  }
+
+  updateEmailPreference(event: Event): void {
+    const enabled = (event.target as HTMLInputElement).checked;
+    this.savingPreference = true;
+    this.notificationError = '';
+    this.notificationService.updatePreference(enabled).subscribe({
+      next: (preference) => {
+        this.preference = preference;
+        this.savingPreference = false;
+      },
+      error: () => {
+        this.notificationError = 'Could not save email preferences.';
+        this.savingPreference = false;
+      },
+    });
+  }
+
+  changeHistoryPage(page: number): void {
+    if (
+      !this.history ||
+      page < 1 ||
+      page > Math.ceil(this.history.total / this.history.size)
+    ) {
+      return;
+    }
+    this.loadNotifications(page);
   }
 }
