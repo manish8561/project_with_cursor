@@ -96,6 +96,13 @@ backend/
 │       ├── logger/          # Zap structured logging
 │       ├── models/
 │       └── services/
+├── notification-service/
+│   ├── go.mod
+│   ├── Dockerfile
+│   └── internal/
+│       ├── handlers/
+│       ├── models/
+│       └── services/
 ├── api-gateway/
 │   ├── cmd/
 │   │   └── api-gateway/
@@ -122,7 +129,7 @@ backend/
 
 ### Vulnerability Checks
 
-Scan all backend services (`auth-service`, `user-service`, and `api-gateway`) from the repository root before pushing. The check runs `govulncheck`, Trivy filesystem scans of each Go module, and Trivy vulnerability scans of freshly built Docker images. Trivy runs in disposable `aquasec/trivy:latest` containers using `docker run`; the image is pulled before each scan so the scanner stays current. Image scans mount the local Docker socket, the vulnerability database is cached in the `backend-trivy-cache` Docker volume, and temporary service images are removed when the scan finishes. The first scan downloads the vulnerability database.
+Scan all backend services (`auth-service`, `user-service`, `notification-service`, and `api-gateway`) from the repository root before pushing. The check runs `govulncheck`, Trivy filesystem scans of each Go module, and Trivy vulnerability scans of freshly built Docker images. Trivy runs in disposable `aquasec/trivy:latest` containers using `docker run`; the image is pulled before each scan so the scanner stays current. Image scans mount the local Docker socket, the vulnerability database is cached in the `backend-trivy-cache` Docker volume, and temporary service images are removed when the scan finishes. The first scan downloads the vulnerability database.
 
 ```bash
 make -C backend security-check
@@ -133,7 +140,7 @@ The Trivy ignore list in `backend/.trivyignore` records two scoped exceptions: `
 Run either scanner independently for local testing. From the repository root, run `govulncheck` across all Go services:
 
 ```bash
-for service in auth-service user-service api-gateway; do
+for service in auth-service user-service notification-service api-gateway; do
   (cd "backend/$service" && govulncheck ./...) || exit 1
 done
 ```
@@ -168,6 +175,14 @@ The repository's pre-push hook runs the full check automatically when backend fi
    - MongoDB: localhost:27017
 
 ### Testing Environment
+
+Run unit tests for every backend Go module from the repository root:
+
+```bash
+make -C backend test
+```
+
+The repository-level `test.sh` script starts the test MongoDB container and runs this same backend test target.
 
 1. **Start test environment**:
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-services=(auth-service user-service api-gateway)
+services=(auth-service user-service notification-service api-gateway)
 severity="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL"
 trivy_image="${TRIVY_IMAGE:-aquasec/trivy:latest}"
 trivy_cache_volume="${TRIVY_CACHE_VOLUME:-backend-trivy-cache}"

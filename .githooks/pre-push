@@ -44,6 +44,7 @@ done
 needs_frontend=0
 needs_auth=0
 needs_user=0
+needs_notification=0
 needs_gateway=0
 needs_backend=0
 
@@ -53,6 +54,7 @@ while IFS= read -r file; do
     frontend/*) needs_frontend=1 ;;
     backend/auth-service/*) needs_backend=1; needs_auth=1 ;;
     backend/user-service/*) needs_backend=1; needs_user=1 ;;
+    backend/notification-service/*) needs_backend=1; needs_notification=1 ;;
     backend/api-gateway/*) needs_backend=1; needs_gateway=1 ;;
     backend/*) needs_backend=1 ;;
   esac
@@ -118,6 +120,9 @@ if [[ "$needs_auth" -eq 1 ]]; then
 fi
 if [[ "$needs_user" -eq 1 ]]; then
   build_backend_service "user-service" "user-service"
+fi
+if [[ "$needs_notification" -eq 1 ]]; then
+  build_backend_service "notification-service" "notification-service"
 fi
 if [[ "$needs_gateway" -eq 1 ]]; then
   build_backend_service "api-gateway" "api-gateway"

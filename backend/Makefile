@@ -1,6 +1,15 @@
-BACKEND_SERVICES := auth-service user-service api-gateway
+BACKEND_SERVICES := auth-service user-service notification-service api-gateway
 
-.PHONY: security-check trivy-security-check trivy-fs-security-check trivy-image-security-check
+.PHONY: test security-check trivy-security-check trivy-fs-security-check trivy-image-security-check
+
+# Run unit tests for every backend service.
+test:
+	@set -e; \
+	for service in $(BACKEND_SERVICES); do \
+		echo "Testing $$service..."; \
+		(cd "$$service" && go test -v ./...); \
+	done
+
 # Scan every backend service for known Go and image vulnerabilities.
 security-check:
 	@if ! command -v govulncheck >/dev/null 2>&1; then \
