@@ -13,15 +13,14 @@ if [[ ! -d "${ROOT}/.git" ]]; then
 fi
 
 mkdir -p "${HOOKS_DIR}"
-chmod +x "${ROOT}/.githooks/pre-push" "${ROOT}/.githooks/install.sh"
+chmod +x "${ROOT}/.githooks/pre-commit" "${ROOT}/.githooks/pre-push" \
+  "${ROOT}/backend/scripts/pre-commit.sh" "${ROOT}/.githooks/install.sh"
 
-# Remove old pre-commit hook from earlier setup if present.
-if [[ -L "${HOOKS_DIR}/pre-commit" ]] || [[ -f "${HOOKS_DIR}/pre-commit" ]]; then
-  rm -f "${HOOKS_DIR}/pre-commit"
-fi
-
+ln -sfn "../../.githooks/pre-commit" "${HOOKS_DIR}/pre-commit"
 ln -sfn "../../.githooks/pre-push" "${HOOKS_DIR}/pre-push"
 
+echo "Installed pre-commit hook -> ${HOOKS_DIR}/pre-commit"
+echo "  (checks Go formatting and runs go vet for changed backend services)"
 echo "Installed pre-push hook -> ${HOOKS_DIR}/pre-push"
 echo "  (builds frontend and backend separately when related files are pushed)"
-echo "  Skip with: SKIP_GIT_HOOKS=1 git push ..."
+echo "  Skip either hook with: SKIP_GIT_HOOKS=1 git <commit|push> ..."

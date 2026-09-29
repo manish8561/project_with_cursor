@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Pre-commit: check formatting and static analysis for changed backend services.
+# Skip with: SKIP_GIT_HOOKS=1 git commit ...
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+if [[ "${SKIP_GIT_HOOKS:-}" == "1" ]]; then
+  echo "[pre-commit] SKIP_GIT_HOOKS=1 — skipping checks"
+  exit 0
+fi
+
+exec "${ROOT}/backend/scripts/pre-commit.sh"

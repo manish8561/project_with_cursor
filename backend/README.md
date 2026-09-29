@@ -127,6 +127,16 @@ backend/
 - `jq` to format vulnerability scan results
 - A running Docker daemon to run Trivy from the `aquasec/trivy` image and build the service images
 
+### Pre-commit Checks
+
+Install the repository Git hooks from the repository root:
+
+```bash
+./.githooks/install.sh
+```
+
+When a commit includes Go files in a backend service, the pre-commit hook checks the staged files with `gofmt` and runs `go vet ./...` for each affected service. If formatting fails, format the file(s) with `gofmt -w <file>`, stage the result, and commit again. The hook does not rewrite files automatically. Set `SKIP_GIT_HOOKS=1` for a one-time bypass.
+
 ### Vulnerability Checks
 
 Scan all backend services (`auth-service`, `user-service`, `notification-service`, and `api-gateway`) from the repository root before pushing. The check runs `govulncheck`, Trivy filesystem scans of each Go module, and Trivy vulnerability scans of freshly built Docker images. Trivy runs in disposable `aquasec/trivy:latest` containers using `docker run`; the image is pulled before each scan so the scanner stays current. Image scans mount the local Docker socket, the vulnerability database is cached in the `backend-trivy-cache` Docker volume, and temporary service images are removed when the scan finishes. The first scan downloads the vulnerability database.
