@@ -34,6 +34,12 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 ./.githooks/install.sh
 ```
 
+Run the same formatting and lint checks locally for all backend services at any time:
+
+```bash
+make -C backend lint-format
+```
+
 Run the vulnerability scan manually at any time, including before pushing. It runs `govulncheck`, scans Go dependencies and freshly built service images with Trivy, and prints results for all backend services:
 
 ```bash

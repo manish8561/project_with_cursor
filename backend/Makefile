@@ -1,6 +1,10 @@
 BACKEND_SERVICES := auth-service user-service notification-service api-gateway
 
-.PHONY: test security-check trivy-security-check trivy-fs-security-check trivy-image-security-check
+.PHONY: lint-format test security-check trivy-security-check trivy-fs-security-check trivy-image-security-check
+
+# Check formatting and run go vet for every backend service.
+lint-format:
+	bash scripts/pre-commit.sh --all
 
 # Run unit tests for every backend service.
 test:

@@ -84,4 +84,3 @@ func (p *KafkaPublisher) Close() error {
 	}
 	return nil
 }
-

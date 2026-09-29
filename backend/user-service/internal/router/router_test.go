@@ -96,10 +96,10 @@ func TestNewRouter_RegistersUserRoutes(t *testing.T) {
 		path         string
 		expectedCode int
 	}{
-		{http.MethodGet, "/api/users/me", http.StatusUnauthorized}, // Will fail due to missing auth
-		{http.MethodGet, "/api/users/profile/123", http.StatusUnauthorized}, // Will fail due to missing auth
-		{http.MethodGet, "/api/users/list", http.StatusUnauthorized}, // Will fail due to missing auth
-		{http.MethodPut, "/api/users/profile/123", http.StatusUnauthorized}, // Will fail due to missing auth
+		{http.MethodGet, "/api/users/me", http.StatusUnauthorized},             // Will fail due to missing auth
+		{http.MethodGet, "/api/users/profile/123", http.StatusUnauthorized},    // Will fail due to missing auth
+		{http.MethodGet, "/api/users/list", http.StatusUnauthorized},           // Will fail due to missing auth
+		{http.MethodPut, "/api/users/profile/123", http.StatusUnauthorized},    // Will fail due to missing auth
 		{http.MethodDelete, "/api/users/profile/123", http.StatusUnauthorized}, // Will fail due to missing auth
 	}
 

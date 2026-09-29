@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"user-service/internal/logger"
 	"time"
+	"user-service/internal/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
