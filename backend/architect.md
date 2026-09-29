@@ -97,21 +97,39 @@ flowchart TD
     USER -->|Read profile| MONGO
 ```
 
+## Notification flow
+
+```mermaid
+flowchart LR
+    AUTH[Auth Service]
+    KAFKA[Kafka Topic: user.created.v1]
+    NOTIFY[Notification Service]
+    PREF[(notification_db.notification_preferences)]
+    HIST[(notification_db.notification_records)]
+    SMTP[SMTP provider]
+
+    AUTH -->|User created| KAFKA
+    KAFKA -->|Consume event| NOTIFY
+    NOTIFY -->|Load user preference| PREF
+    NOTIFY -->|Store delivery result| HIST
+    NOTIFY -->|Send welcome email| SMTP
+```
+
 ## Request lifecycle summary
 
 1. The frontend sends requests to the API gateway.
 2. The gateway routes the request to the relevant microservice.
 3. Auth service handles login, registration, token validation, refresh, and logout.
 4. User service handles profile retrieval, updates, listing, and deletion.
-5. JWT is stored in an HttpOnly cookie named `access_token`.
-6. Events are published to Kafka when user lifecycle changes occur.
-7. User service consumes those events to keep the profile database synchronized.
-8. Notification service consumes `user.created.v1`, checks the user's email preference, and records the welcome-email outcome. Browser clients can only read or update their own preference and history through the gateway.
+5. Notification service handles preference management and welcome email delivery.
+6. JWT is stored in an HttpOnly cookie named `access_token`.
+7. Events are published to Kafka when user lifecycle changes occur.
+8. User and notification services consume those events to stay synchronized.
 
 ## Notes
 
 - `auth-service` owns `auth_db` authentication data.
 - `user-service` owns `user_db` profile data.
 - `notification-service` owns `notification_db` preferences and delivery history.
-- The API gateway acts as the single entry point for frontend traffic.
-- Cookie-based auth is used for browser sessions, while JWT validation also supports Bearer token fallback in some flows.
+- The API gateway is the single entry point for frontend traffic.
+- Cookie-based auth is used for browser sessions, and token validation also supports bearer-token fallback in some flows.
