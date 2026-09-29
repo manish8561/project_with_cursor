@@ -84,6 +84,8 @@ fi
 for service in "${SERVICES[@]}"; do
   echo "[pre-commit] Running go vet for ${service}..."
   (cd "${ROOT}/backend/${service}" && go vet ./...)
+  echo "[pre-commit] Running tests for ${service}..."
+  (cd "${ROOT}/backend/${service}" && go test ./... -count=1)
 done
 
-echo "[pre-commit] Backend formatting and lint checks passed"
+echo "[pre-commit] Backend formatting, lint, and test checks passed"

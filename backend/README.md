@@ -135,9 +135,9 @@ Install the repository Git hooks from the repository root:
 ./.githooks/install.sh
 ```
 
-When a commit includes Go files in a backend service, the pre-commit hook checks the staged files with `gofmt` and runs `go vet ./...` for each affected service. If formatting fails, format the file(s) with `gofmt -w <file>`, stage the result, and commit again. The hook does not rewrite files automatically. Set `SKIP_GIT_HOOKS=1` for a one-time bypass.
+When a commit includes Go files in a backend service, the pre-commit hook checks the staged files with `gofmt`, then runs `go vet ./...` and `go test ./...` for each affected service. If formatting fails, format the file(s) with `gofmt -w <file>`, stage the result, and commit again. The hook does not rewrite files automatically. Set `SKIP_GIT_HOOKS=1` for a one-time bypass.
 
-Run the same formatting and lint checks for all backend services locally:
+Run the same formatting, lint, and test checks for all backend services locally:
 
 ```bash
 make -C backend lint-format

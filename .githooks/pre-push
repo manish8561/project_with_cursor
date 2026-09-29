@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Pre-push: scan all backend services for vulnerabilities, test/build changed services,
+# Pre-push: scan all backend services for vulnerabilities, build changed services,
 # and build the frontend when related files are in the push.
 # Skip with: SKIP_GIT_HOOKS=1 git push ...
 
@@ -74,14 +74,6 @@ build_backend_service() {
   local pkg="$2"
 
   echo ""
-  echo "==> Backend: testing ${name}"
-  (
-    cd "${ROOT}/backend/${name}"
-    go test ./... -v -count 1
-  )
-  echo "==> Backend: ${name} tests passed"
-
-  echo ""
   echo "==> Backend: building ${name}"
   (
     cd "${ROOT}/backend/${name}"
@@ -134,5 +126,5 @@ if [[ "$needs_frontend" -eq 1 ]]; then
 fi
 
 echo ""
-echo "[pre-push] All required vulnerability scans, tests, and builds passed"
+echo "[pre-push] All required vulnerability scans and builds passed"
 exit 0
