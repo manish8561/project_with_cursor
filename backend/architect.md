@@ -121,10 +121,10 @@ flowchart LR
 2. The gateway routes the request to the relevant microservice.
 3. Auth service handles login, registration, token validation, refresh, and logout.
 4. User service handles profile retrieval, updates, listing, and deletion.
-5. Notification service handles preference management and welcome email delivery.
-6. JWT is stored in an HttpOnly cookie named `access_token`.
-7. Events are published to Kafka when user lifecycle changes occur.
-8. User and notification services consume those events to stay synchronized.
+5. JWT is stored in an HttpOnly cookie named `access_token`.
+6. Events are published to Kafka when user lifecycle changes occur.
+7. User service consumes those events to keep the profile database synchronized.
+8. Notification service consumes `user.created.v1`, checks the user's email preference, and records the welcome-email outcome. Browser clients can only read or update their own preference and history through the gateway.
 
 ## Notes
 
