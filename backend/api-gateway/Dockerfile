@@ -9,7 +9,7 @@ RUN GOPROXY=https://goproxy.cn make build
 
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates curl
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates curl
 
 
 # Copy built binaries

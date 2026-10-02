@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o notification-service ./cmd/notification-service
 
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates curl
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates curl
 WORKDIR /root/
 COPY --from=builder /app/notification-service .
 EXPOSE 8083
