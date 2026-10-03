@@ -3,6 +3,7 @@ package services
 import (
 	"auth-service/internal/config"
 	"auth-service/internal/models"
+	"auth-service/internal/password"
 	"context"
 	"errors"
 	"time"
@@ -29,15 +30,31 @@ func NewAuthService(mongoConfig *config.MongoDBConfig, jwtService *JWTService, p
 
 // Login authenticates a user with the provided email and password.
 // Returns a JWT token upon successful authentication or an error if credentials are invalid.
-func (s *AuthService) Login(email, password string) (*models.LoginResponse, error) {
+func (s *AuthService) Login(email, plainPassword string) (*models.LoginResponse, error) {
 	collection := s.mongoConfig.GetCollection("auth_users")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var user models.User
-	err := collection.FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user)
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
+	}
+
+	ok, needsRehash := password.Check(user.Password, plainPassword)
+	if !ok {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if needsRehash {
+		hashed, hashErr := password.Hash(plainPassword)
+		if hashErr == nil {
+			_, _ = collection.UpdateOne(
+				ctx,
+				bson.M{"_id": user.ID},
+				bson.M{"$set": bson.M{"password": hashed, "updatedAt": time.Now()}},
+			)
+		}
 	}
 
 	token, err := s.jwtService.GenerateToken(user.ID)
@@ -67,12 +84,18 @@ func (s *AuthService) Register(req models.RegisterRequest) (*models.RegisterResp
 		return nil, errors.New("user already exists")
 	}
 
+	// Hash password
+	hashedPassword, err := password.Hash(req.Password)
+	if err != nil {
+		return nil, errors.New("failed to hash password")
+	}
+
 	// Create new user
 	newUser := models.User{
 		ID:        primitive.NewObjectID().Hex(),
 		Name:      req.Name,
 		Email:     req.Email,
-		Password:  req.Password, // In real app, this would be hashed
+		Password:  hashedPassword,
 		Status:    "active",
 		Role:      "customer",
 		CreatedAt: time.Now(),

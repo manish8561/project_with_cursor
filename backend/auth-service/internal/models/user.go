@@ -7,7 +7,7 @@ type User struct {
 	ID        string    `json:"id" bson:"_id,omitempty"`
 	Name      string    `json:"name" bson:"name"`
 	Email     string    `json:"email" binding:"required,email" bson:"email"`
-	Password  string    `json:"password" binding:"required,min=6" bson:"password"`
+	Password  string    `json:"-" bson:"password"`
 	Status    string    `json:"status" bson:"status"`
 	Role      string    `json:"role" bson:"role"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`

@@ -150,7 +150,7 @@ Proposed follow-up work. Items are prioritized; higher priority should land befo
 
 ### P0 — Security and correctness
 
-1. **Hash passwords** — Auth currently stores and compares plaintext passwords (`auth-service` register/login). Use bcrypt or argon2 and migrate existing users.
+1. **Hash passwords** — Done: auth-service hashes with bcrypt on register, verifies with `CompareHashAndPassword` on login, and lazily upgrades legacy plaintext rows.
 2. **Gateway upstream timeouts** — Proxy calls should use an HTTP client with explicit timeouts (and eventually circuit breakers) instead of the default client.
 3. **Auth-side account delete** — `user.deleted.v1` publishing exists, but auth does not delete accounts or emit deletes; user-service delete only removes profiles. Add a full account-deletion path from auth.
 4. **Production cookie / TLS settings** — When serving over HTTPS, set `COOKIE_SECURE=true` and an appropriate `COOKIE_SAME_SITE` (e.g. `None` with Secure when cross-site).
@@ -179,13 +179,14 @@ Proposed follow-up work. Items are prioritized; higher priority should land befo
 ### P2 — Cleanup and documentation
 
 1. **Remove Kratos greeter / helloworld scaffold** from the API Gateway (HTTP `/helloworld/{name}`, related proto/biz/data/service code) so production surface matches real APIs only.
-2. **Refresh docs** — Keep `README.md` / `backend/README.md` aligned with reality (notification service is implemented; gateway rate limiting and router modules are done; service-level rate limiting is not; avoid implying password hashing via transitive `pbkdf2` deps).
+2. **Refresh docs** — Keep `README.md` / `backend/README.md` aligned with reality (notification service is implemented; gateway rate limiting and router modules are done; service-level rate limiting is not).
 3. **Compose healthchecks** — Replace one-shot / very long `interval` healthchecks with continuous checks suitable for ops.
 4. **Auth / user product gaps** — Password change, roles UX, and richer account lifecycle beyond the current cookie session flows.
 
 ### Already in place (do not re-plan as greenfield)
 
 - Cookie-based JWT sessions (HttpOnly `access_token`)
+- Bcrypt password hashing on register/login (with lazy upgrade of legacy plaintext rows)
 - Auth, User, Notification, and API Gateway microservices
 - MongoDB per-service databases and Kafka user lifecycle sync
 - Zap structured logging, Swagger/OpenAPI on the gateway
