@@ -1,8 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AuthService, LoginRequest } from '../services/auth.service';
+import {
+  AuthService,
+  getAuthErrorMessage,
+  LoginRequest,
+} from '../services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -117,7 +121,8 @@ export class LoginComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private changeDetector: ChangeDetectorRef
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -135,19 +140,32 @@ export class LoginComponent implements OnInit {
 
   onSubmit() {
     if (this.loginForm.valid) {
+      this.errorMessage = '';
+      this.changeDetector.markForCheck();
       const credentials: LoginRequest = this.loginForm.value;
       this.authService.login(credentials).subscribe({
         next: (response) => {
           if (response.status === 'success') {
             this.router.navigate(['/dashboard']);
           } else {
-            this.errorMessage = 'Login failed. Please try again.';
+            this.showError(getAuthErrorMessage(
+              response,
+              'Login failed. Please try again.',
+            ));
           }
         },
-        error: (error) => {
-          this.errorMessage = error.error?.error || error.error?.message || 'Login failed. Please try again.';
+        error: (error: unknown) => {
+          this.showError(getAuthErrorMessage(
+            error,
+            'Login failed. Please try again.',
+          ));
         }
       });
     }
+  }
+
+  private showError(message: string): void {
+    this.errorMessage = message;
+    this.changeDetector.markForCheck();
   }
 }

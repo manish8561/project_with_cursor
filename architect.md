@@ -183,6 +183,9 @@ Proposed follow-up work. Items are prioritized; higher priority should land befo
 3. **Compose healthchecks** — Replace one-shot / very long `interval` healthchecks with continuous checks suitable for ops.
 4. **Auth / user product gaps** — Password change, roles UX, and richer account lifecycle beyond the current cookie session flows.
 
+5. Implmentation of user sessions collection in the backend for each cookie we keep.
+6. Using toast feature for success and error message showing in the frontend.
+
 ### Already in place (do not re-plan as greenfield)
 
 - Cookie-based JWT sessions (HttpOnly `access_token`)

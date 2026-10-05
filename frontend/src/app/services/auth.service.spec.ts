@@ -1,0 +1,61 @@
+import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { AuthService, getAuthErrorMessage } from './auth.service';
+import { environment } from '../../environments/environment';
+
+describe('AuthService', () => {
+  let service: AuthService;
+  let httpTestingController: HttpTestingController;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(AuthService);
+    httpTestingController = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    httpTestingController.verify();
+  });
+
+  it('rechecks authentication after a successful login', () => {
+    service.checkAuth().subscribe();
+    httpTestingController
+      .expectOne(`${environment.apiUrl}/auth/me`)
+      .flush({ status: 'failure' }, { status: 401, statusText: 'Unauthorized' });
+
+    service.login({ email: 'user@example.com', password: 'password' }).subscribe();
+    httpTestingController
+      .expectOne(`${environment.apiUrl}/auth/login`)
+      .flush({ status: 'success' });
+
+    let isAuthenticated: boolean | undefined;
+    service.checkAuth().subscribe((value) => (isAuthenticated = value));
+    httpTestingController
+      .expectOne(`${environment.apiUrl}/auth/me`)
+      .flush({ status: 'success', user_id: 'user-123' });
+
+    expect(isAuthenticated).toBeTrue();
+  });
+
+  it('extracts backend messages from auth response bodies', () => {
+    expect(
+      getAuthErrorMessage(
+        new HttpErrorResponse({ error: { error: 'Invalid credentials' } }),
+        'Login failed. Please try again.',
+      ),
+    ).toBe('Invalid credentials');
+    expect(
+      getAuthErrorMessage(
+        { status: 'error', message: 'Email is already registered' },
+        'Registration failed. Please try again.',
+      ),
+    ).toBe('Email is already registered');
+  });
+});

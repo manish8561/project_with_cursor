@@ -1,8 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { AuthService, RegisterRequest } from '../services/auth.service';
+import {
+    AuthService,
+    getAuthErrorMessage,
+    RegisterRequest,
+} from '../services/auth.service';
 
 @Component({
     selector: 'app-register',
@@ -117,7 +121,8 @@ export class RegisterComponent implements OnInit {
     constructor(
         private fb: FormBuilder,
         private authService: AuthService,
-        private router: Router
+        private router: Router,
+        private changeDetector: ChangeDetectorRef
     ) {
         this.registerForm = this.fb.group({
             name: ['', Validators.required],
@@ -148,19 +153,32 @@ export class RegisterComponent implements OnInit {
 
     onSubmit() {
         if (this.registerForm.valid) {
+            this.errorMessage = '';
+            this.changeDetector.markForCheck();
             const userData: RegisterRequest = this.registerForm.value;
             this.authService.register(userData).subscribe({
                 next: (response) => {
                     if (response.status === 'success') {
                         this.router.navigate(['/dashboard']);
                     } else {
-                        this.errorMessage = 'Registration failed. Please try again.';
+                        this.showError(getAuthErrorMessage(
+                            response,
+                            'Registration failed. Please try again.',
+                        ));
                     }
                 },
-                error: (error) => {
-                    this.errorMessage = error.error?.error || error.error?.message || 'Registration failed. Please try again.';
+                error: (error: unknown) => {
+                    this.showError(getAuthErrorMessage(
+                        error,
+                        'Registration failed. Please try again.',
+                    ));
                 }
             });
         }
     }
-} 
+
+    private showError(message: string): void {
+        this.errorMessage = message;
+        this.changeDetector.markForCheck();
+    }
+}

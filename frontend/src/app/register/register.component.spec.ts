@@ -3,30 +3,29 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
-import { LoginComponent } from './login.component';
+import { RegisterComponent } from './register.component';
 
-describe('LoginComponent', () => {
-  let component: LoginComponent;
-  let fixture: ComponentFixture<LoginComponent>;
+describe('RegisterComponent', () => {
+  let component: RegisterComponent;
+  let fixture: ComponentFixture<RegisterComponent>;
   let authService: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
     authService = jasmine.createSpyObj<AuthService>('AuthService', [
       'checkAuth',
-      'login',
+      'register',
     ]);
     authService.checkAuth.and.returnValue(of(false));
 
     await TestBed.configureTestingModule({
-      imports: [LoginComponent],
+      imports: [RegisterComponent],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: Router, useValue: { navigate: jasmine.createSpy('navigate') } },
       ],
-    })
-    .compileComponents();
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(LoginComponent);
+    fixture = TestBed.createComponent(RegisterComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
@@ -35,24 +34,26 @@ describe('LoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('displays the backend error after a failed login', () => {
-    authService.login.and.returnValue(
+  it('displays the backend error after a failed registration', () => {
+    authService.register.and.returnValue(
       throwError(
         () =>
           new HttpErrorResponse({
             status: 400,
-            error: { error: 'Invalid credentials' },
+            error: { error: 'user already exists' },
           }),
       ),
     );
-    component.loginForm.setValue({
+    component.registerForm.setValue({
+      name: 'Test User',
       email: 'user@example.com',
       password: 'password',
+      confirmPassword: 'password',
     });
 
     component.onSubmit();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Invalid credentials');
+    expect(fixture.nativeElement.textContent).toContain('user already exists');
   });
 });

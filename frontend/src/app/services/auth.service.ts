@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { catchError, map, tap } from 'rxjs/operators';
@@ -19,7 +19,49 @@ export interface RegisterRequest {
 export interface AuthResponse {
   status: string;
   message?: string;
+  error?: string;
   user_id?: string;
+}
+
+export function getAuthErrorMessage(error: unknown, fallback: string): string {
+  const payload = error instanceof HttpErrorResponse ? error.error : error;
+  return getMessageFromPayload(payload) ?? fallback;
+}
+
+function getMessageFromPayload(payload: unknown): string | undefined {
+  if (typeof payload === 'string') {
+    const message = payload.trim();
+    if (!message) {
+      return undefined;
+    }
+
+    try {
+      return getMessageFromPayload(JSON.parse(message)) ?? message;
+    } catch {
+      return message;
+    }
+  }
+
+  if (!(payload instanceof HttpErrorResponse) && payload instanceof Error) {
+    return payload.message.trim() || undefined;
+  }
+
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+
+  for (const key of ['message', 'error', 'detail', 'title']) {
+    const message = getMessageFromPayload(payload[key]);
+    if (message) {
+      return message;
+    }
+  }
+
+  return undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 @Injectable({
@@ -44,20 +86,7 @@ export class AuthService {
         credentials,
         this.httpOptions,
       )
-      .pipe(
-        tap((response) => {
-          if (response.status === 'success') {
-            this.authenticated = true;
-            this.cachedProfile = null;
-          }
-        }),
-        map((response) => {
-          if (response.status === 'success') {
-            return response;
-          }
-          throw new Error('Login failed');
-        }),
-      );
+      .pipe(tap((response) => this.setAuthenticated(response)));
   }
 
   register(userData: RegisterRequest): Observable<AuthResponse> {
@@ -67,20 +96,7 @@ export class AuthService {
         userData,
         this.httpOptions,
       )
-      .pipe(
-        tap((response) => {
-          if (response.status === 'success') {
-            this.authenticated = true;
-            this.cachedProfile = null;
-          }
-        }),
-        map((response) => {
-          if (response.status === 'success') {
-            return response;
-          }
-          throw new Error('Registration failed');
-        }),
-      );
+      .pipe(tap((response) => this.setAuthenticated(response)));
   }
 
   logout(): Observable<AuthResponse> {
@@ -165,5 +181,15 @@ export class AuthService {
 
   isBrowser(): boolean {
     return typeof window !== 'undefined';
+  }
+
+  private setAuthenticated(response: AuthResponse): void {
+    if (response.status === 'success') {
+      this.authenticated = true;
+      this.userId = response.user_id ?? null;
+      this.cachedProfile = null;
+      this.cachedAuthCheck = null;
+      this.authCheckTimestamp = 0;
+    }
   }
 }
