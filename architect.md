@@ -184,7 +184,6 @@ Proposed follow-up work. Items are prioritized; higher priority should land befo
 4. **Auth / user product gaps** — Password change, roles UX, and richer account lifecycle beyond the current cookie session flows.
 
 5. Implmentation of user sessions collection in the backend for each cookie we keep.
-6. Using toast feature for success and error message showing in the frontend.
 
 ### Already in place (do not re-plan as greenfield)
 
@@ -197,3 +196,4 @@ Proposed follow-up work. Items are prioritized; higher priority should land befo
 - Notification preferences + delivery history (email path)
 - Local / prod / test Docker Compose and `deploy.sh`
 - Local `make` lint / test / security tooling and unit tests for core packages
+- Toast notifications for success and error messages in the frontend
