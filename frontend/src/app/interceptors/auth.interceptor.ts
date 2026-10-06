@@ -4,21 +4,26 @@ import {
   HttpHandler,
   HttpEvent,
   HttpInterceptor,
-  HttpErrorResponse
+  HttpErrorResponse,
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   constructor(
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastService: ToastService,
   ) {}
 
-  intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(
+    request: HttpRequest<any>,
+    next: HttpHandler,
+  ): Observable<HttpEvent<any>> {
     request = request.clone({ withCredentials: true });
 
     return next.handle(request).pipe(
@@ -31,10 +36,11 @@ export class AuthInterceptor implements HttpInterceptor {
 
         if (error.status === 401 && !isAuthProbe) {
           this.authService.clearSession();
+          this.toastService.warning('Session expired. Please login again.');
           this.router.navigate(['/login']);
         }
         return throwError(() => error);
-      })
+      }),
     );
   }
 }

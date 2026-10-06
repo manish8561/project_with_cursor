@@ -6,6 +6,7 @@ import {
   NotificationPreference,
   NotificationService,
 } from '../services/notification.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-profile',
@@ -29,6 +30,7 @@ export class ProfileComponent implements OnInit {
   constructor(
     private readonly authService: AuthService,
     private readonly notificationService: NotificationService,
+    private readonly toastService: ToastService,
   ) {}
 
   ngOnInit(): void {
@@ -37,7 +39,9 @@ export class ProfileComponent implements OnInit {
         this.user = profile;
       },
       error: (error) => {
-        this.errorMessage = error.error?.error || 'Failed to load profile.';
+        this.toastService.error(
+          error.error?.error || 'Failed to load profile.',
+        );
       },
     });
 
@@ -48,13 +52,15 @@ export class ProfileComponent implements OnInit {
     this.notificationError = '';
     this.notificationService.getPreference().subscribe({
       next: (preference) => (this.preference = preference),
-      error: () =>
-        (this.notificationError = 'Could not load email preferences.'),
+      error: () => {
+        this.toastService.error('Could not load email preferences.');
+      },
     });
     this.notificationService.getHistory(page).subscribe({
       next: (history) => (this.history = history),
-      error: () =>
-        (this.notificationError = 'Could not load notification history.'),
+      error: () => {
+        this.toastService.error('Could not load notification history.');
+      },
     });
   }
 
@@ -66,9 +72,10 @@ export class ProfileComponent implements OnInit {
       next: (preference) => {
         this.preference = preference;
         this.savingPreference = false;
+        this.toastService.success('Email preferences updated successfully!');
       },
       error: () => {
-        this.notificationError = 'Could not save email preferences.';
+        this.toastService.error('Could not save email preferences.');
         this.savingPreference = false;
       },
     });
