@@ -1,4 +1,4 @@
-# Full Stack Microservices Project
+# Identity Hub Services
 
 A full-stack application with Angular frontend and Go microservices backend.
 
